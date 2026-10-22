@@ -4,11 +4,12 @@ import { Dashboard } from './components/Dashboard';
 import { KanbanBoard } from './components/KanbanBoard';
 import { LeadsTable } from './components/LeadsTable';
 import { BrokersPropertiesView } from './components/BrokersPropertiesView';
+import { ReportsView } from './components/ReportsView';
 import { AiAdvisor } from './components/AiAdvisor';
 import { LeadModal } from './components/LeadModal';
 import { INITIAL_LEADS } from './mockData';
-import { Lead, PipelineStage } from './types';
-import { X, User, Phone, Mail, Building, Calendar, DollarSign, CheckCircle2 } from 'lucide-react';
+import { Lead, PipelineStage, BROKERS } from './types';
+import { X, Phone, Mail, Building, DollarSign } from 'lucide-react';
 
 export default function App() {
   const [leads, setLeads] = useState<Lead[]>(() => {
@@ -30,7 +31,6 @@ export default function App() {
 
   const handleSaveLead = (leadData: Partial<Lead>) => {
     if (leadToEdit) {
-      // Edit existing lead
       setLeads(prev => prev.map(l => {
         if (l.id === leadToEdit.id) {
           const updated: Lead = {
@@ -52,13 +52,12 @@ export default function App() {
         return l;
       }));
     } else {
-      // Create new lead
       const newLead: Lead = {
         id: `lead-${Date.now()}`,
         clientName: leadData.clientName || '',
         clientPhone: leadData.clientPhone || '',
         clientEmail: leadData.clientEmail || '',
-        brokerName: leadData.brokerName || 'Carlos Silva',
+        brokerName: leadData.brokerName || BROKERS[0],
         development: leadData.development || 'Residencial Vista Verde',
         origin: leadData.origin || 'Instagram Ads',
         status: leadData.status || 'lead',
@@ -79,7 +78,7 @@ export default function App() {
             id: `h-${Date.now()}`,
             date: new Date().toLocaleString('pt-BR'),
             action: `Lead criado (Origem: ${leadData.origin})`,
-            user: leadData.brokerName || 'Carlos Silva'
+            user: leadData.brokerName || BROKERS[0]
           }
         ]
       };
@@ -171,6 +170,10 @@ export default function App() {
 
         {activeTab === 'settings' && (
           <BrokersPropertiesView />
+        )}
+
+        {activeTab === 'reports' && (
+          <ReportsView leads={leads} />
         )}
 
         {activeTab === 'ai' && (

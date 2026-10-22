@@ -4,12 +4,11 @@ import {
   Kanban, 
   Users, 
   Building2, 
+  FileText,
   Sparkles, 
   UserPlus, 
   Download, 
-  Upload, 
-  Home,
-  FileSpreadsheet
+  Home
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -31,12 +30,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'kanban', label: 'Funil Kanban', icon: Kanban },
     { id: 'leads', label: 'Tabela de Leads', icon: Users },
-    { id: 'settings', label: 'Equipe & Imóveis', icon: Building2 },
+    { id: 'settings', label: 'Cadastros', icon: Building2 },
+    { id: 'reports', label: 'Relatórios', icon: FileText },
     { id: 'ai', label: 'Corretor IA', icon: Sparkles },
   ];
 
   return (
-    <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs">
+    <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-xs print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
@@ -58,7 +58,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Navigation Tabs */}
-          <nav className="hidden md:flex items-center space-x-1">
+          <nav className="hidden lg:flex items-center space-x-1">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -66,7 +66,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                     isActive
                       ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
                       : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -87,7 +87,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors hidden sm:flex items-center gap-1 text-xs font-medium border border-slate-200 dark:border-slate-700"
             >
               <Download className="w-4 h-4" />
-              <span>Exportar</span>
+              <span>Exportar JSON</span>
             </button>
 
             <button
@@ -102,7 +102,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Mobile Nav Bar */}
-      <div className="md:hidden flex items-center justify-around border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-2 py-2">
+      <div className="lg:hidden flex items-center justify-around border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-1 py-2 overflow-x-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -110,14 +110,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-col items-center gap-1 p-2 rounded-lg text-xs font-medium transition-colors ${
+              className={`flex flex-col items-center gap-1 p-2 rounded-lg text-xs font-medium transition-colors flex-shrink-0 ${
                 isActive
                   ? 'text-blue-600 dark:text-blue-400 font-semibold'
                   : 'text-slate-500 dark:text-slate-400'
               }`}
             >
-              <Icon className="w-5 h-5" />
-              <span className="truncate max-w-[70px]">{tab.label}</span>
+              <Icon className="w-4 h-4" />
+              <span className="truncate max-w-[65px]">{tab.label}</span>
             </button>
           );
         })}

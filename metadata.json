@@ -1,0 +1,6 @@
+{
+  "name": "ImmoFlow - Gestão de Leads e Vendas Imobiliárias",
+  "description": "Sistema completo para controle de leads com origem, visitas ao plantão, montagem de pastas, análise de crédito (aprovados, reprovados, condicionados) e vendas realizadas por corretor e empreendimento.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

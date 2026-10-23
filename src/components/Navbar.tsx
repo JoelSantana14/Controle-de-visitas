@@ -11,7 +11,8 @@ import {
   Home,
   Palette,
   Square,
-  Check
+  Check,
+  CheckSquare
 } from 'lucide-react';
 import { ThemeMode, BorderMode } from '../types';
 
@@ -43,6 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'kanban', label: 'Funil Kanban', icon: Kanban },
     { id: 'leads', label: 'Tabela de Leads', icon: Users },
+    { id: 'tasks', label: 'Tarefas', icon: CheckSquare },
     { id: 'settings', label: 'Cadastros', icon: Building2 },
     { id: 'reports', label: 'Relatórios', icon: FileText },
     { id: 'ai', label: 'Corretor IA', icon: Sparkles },

@@ -113,8 +113,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         </div>
       </div>
 
-      {/* Kanban Columns Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4 items-start overflow-x-auto pb-6">
+      {/* Kanban Columns Horizontal Scrollable Flex Container */}
+      <div className="flex gap-4 items-start overflow-x-auto pb-6 w-full scroll-smooth">
         {stages.map((stageKey) => {
           const config = STAGE_CONFIG[stageKey];
           const stageLeads = leads.filter(l => l.status === stageKey);
@@ -123,7 +123,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           return (
             <div 
               key={stageKey}
-              className={`bg-slate-50 dark:bg-slate-900/50 ${borderMode === 'destacada' ? 'border-2 border-slate-200 dark:border-slate-800' : 'border border-slate-200 dark:border-slate-800'} rounded-2xl p-3 flex flex-col min-w-[260px] max-h-[80vh]`}
+              className={`bg-slate-50 dark:bg-slate-900/50 ${borderMode === 'destacada' ? 'border-2 border-slate-200 dark:border-slate-800' : 'border border-slate-200 dark:border-slate-800'} rounded-2xl p-3 flex flex-col w-[290px] sm:w-[310px] flex-shrink-0 max-h-[80vh]`}
             >
               {/* Column Header */}
               <div className={`p-3 rounded-xl ${config.bg} border ${config.border} mb-3 flex items-center justify-between`}>

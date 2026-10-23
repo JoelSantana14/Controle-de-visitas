@@ -200,3 +200,44 @@ export const INITIAL_TEAM_ITEMS: TeamItem[] = [
 export const ORIGINS = INITIAL_ORIGIN_ITEMS.map(o => o.name);
 export const DEVELOPMENTS = INITIAL_DEVELOPMENT_ITEMS.map(d => d.name);
 export const BROKERS = INITIAL_BROKER_ITEMS.map(b => b.name);
+
+export type TaskPriority = 'baixa' | 'media' | 'alta';
+export type TaskStatus = 'pendente' | 'em_andamento' | 'concluido';
+
+export interface TaskItem {
+  id: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  assignedTo: string;
+  relatedClient?: string;
+  createdAt: string;
+}
+
+export const INITIAL_TASKS: TaskItem[] = [
+  {
+    id: 't-1',
+    title: 'Enviar simulação de financiamento',
+    description: 'Enviar laudo e taxas atualizadas para o cliente Roberto Carlos.',
+    dueDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+    priority: 'alta',
+    status: 'pendente',
+    assignedTo: 'Carlos Silva',
+    relatedClient: 'Roberto Carlos',
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 't-2',
+    title: 'Confirmar visita ao plantão Alpha',
+    description: 'Ligar para confirmar horário de visitação no stand de vendas.',
+    dueDate: new Date().toISOString().slice(0, 10),
+    priority: 'media',
+    status: 'em_andamento',
+    assignedTo: 'Ana Souza',
+    relatedClient: 'Juliana Mendes',
+    createdAt: new Date().toISOString()
+  }
+];
+

@@ -6,6 +6,7 @@ import { LeadsTable } from './components/LeadsTable';
 import { BrokersPropertiesView } from './components/BrokersPropertiesView';
 import { ReportsView } from './components/ReportsView';
 import { AiAdvisor } from './components/AiAdvisor';
+import { TaskManager } from './components/TaskManager';
 import { LeadModal } from './components/LeadModal';
 import { INITIAL_LEADS } from './mockData';
 import { 
@@ -15,12 +16,14 @@ import {
   DevelopmentItem, 
   OriginItem, 
   TeamItem, 
+  TaskItem,
   ThemeMode, 
   BorderMode,
   INITIAL_BROKER_ITEMS,
   INITIAL_DEVELOPMENT_ITEMS,
   INITIAL_ORIGIN_ITEMS,
-  INITIAL_TEAM_ITEMS
+  INITIAL_TEAM_ITEMS,
+  INITIAL_TASKS
 } from './types';
 import { X, Phone, Mail, Building, DollarSign, AlertTriangle } from 'lucide-react';
 
@@ -70,6 +73,15 @@ export default function App() {
     return INITIAL_TEAM_ITEMS;
   });
 
+  // Persistent Tasks
+  const [tasks, setTasks] = useState<TaskItem[]>(() => {
+    const saved = localStorage.getItem('immoflow_tasks');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
+    return INITIAL_TASKS;
+  });
+
   // Theme & Border Mode (Default: Bordô Nobre & Bordas Destacadas)
   const [theme, setTheme] = useState<ThemeMode>(() => {
     const saved = localStorage.getItem('immoflow_theme');
@@ -107,6 +119,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('immoflow_teams', JSON.stringify(teams));
   }, [teams]);
+
+  useEffect(() => {
+    localStorage.setItem('immoflow_tasks', JSON.stringify(tasks));
+  }, [tasks]);
 
   useEffect(() => {
     localStorage.setItem('immoflow_theme', theme);
@@ -312,6 +328,16 @@ export default function App() {
             setOrigins={setOrigins}
             teams={teams}
             setTeams={setTeams}
+            theme={theme}
+            borderMode={borderMode}
+          />
+        )}
+
+        {activeTab === 'tasks' && (
+          <TaskManager 
+            tasks={tasks}
+            setTasks={setTasks}
+            availableBrokers={brokerNames}
             theme={theme}
             borderMode={borderMode}
           />

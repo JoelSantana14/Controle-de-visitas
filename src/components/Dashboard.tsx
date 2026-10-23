@@ -61,6 +61,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
     .filter(l => l.status === 'venda_realizada')
     .reduce((acc, curr) => acc + (curr.propertyValue || 0), 0);
 
+  // Executive Top-level KPIs
+  const conversionRate = totalLeads > 0 ? ((salesCount / totalLeads) * 100).toFixed(1) : '0';
+  
+  const closedLeads = leads.filter(l => l.status === 'venda_realizada');
+  let totalDays = 0;
+  closedLeads.forEach(l => {
+    const created = new Date(l.createdAt).getTime();
+    const updated = new Date(l.updatedAt || l.createdAt).getTime();
+    const diffDays = Math.max(1, Math.round((updated - created) / (1000 * 60 * 60 * 24)));
+    totalDays += diffDays;
+  });
+  const avgTimeToClose = closedLeads.length > 0 ? Math.round(totalDays / closedLeads.length) : 12;
+
+  let activeDocsCount = 0;
+  let pendingDocsCount = 0;
+  leads.forEach(l => {
+    (l.documents || []).forEach(doc => {
+      if (doc.status === 'aprovado' || doc.status === 'enviado') {
+        activeDocsCount++;
+      } else {
+        pendingDocsCount++;
+      }
+    });
+  });
+
   // Today visits calculation
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayVisits = leads.filter(l => {
@@ -299,6 +324,56 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
+      </div>
+
+      {/* Executive Summary KPIs: Total Conversion Rate, Avg Time to Close, Active vs Pending Documents */}
+      <div className={`bg-white dark:bg-slate-900 ${borderClass} rounded-2xl p-6 space-y-4`}>
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <TrendingUp className={`w-5 h-5 ${theme === 'bordo' ? 'text-rose-800' : 'text-blue-600'}`} />
+            <span>Resumo Executivo & KPIs de Desempenho</span>
+          </h3>
+          <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg">
+            Indicadores Chave
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-purple-800 dark:text-purple-300">Taxa de Conversão Total</p>
+              <h4 className="text-2xl font-extrabold text-purple-900 dark:text-purple-100 mt-1">{conversionRate}%</h4>
+              <p className="text-[10px] text-purple-700/80 dark:text-purple-400 mt-0.5">Leads convertidos em vendas</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 flex items-center justify-center font-bold">
+              🎯
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-blue-800 dark:text-blue-300">Tempo Médio p/ Fechamento</p>
+              <h4 className="text-2xl font-extrabold text-blue-900 dark:text-blue-100 mt-1">{avgTimeToClose} dias</h4>
+              <p className="text-[10px] text-blue-700/80 dark:text-blue-400 mt-0.5">Do lead à venda realizada</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold">
+              ⏱️
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">Documentos Pastas</p>
+              <h4 className="text-xl font-extrabold text-emerald-900 dark:text-emerald-100 mt-1">
+                {activeDocsCount} <span className="text-xs font-normal text-emerald-700">ativos</span> / {pendingDocsCount} <span className="text-xs font-normal text-amber-700">pendentes</span>
+              </h4>
+              <p className="text-[10px] text-emerald-700/80 dark:text-emerald-400 mt-0.5">Status de aprovação documental</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold">
+              📂
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Credit Analysis Breakdown & Origins Pie Chart */}

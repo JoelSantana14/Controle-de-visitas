@@ -1,15 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, Download, Printer, User, Building2, Calendar, CheckCircle2, TrendingUp, DollarSign } from 'lucide-react';
-import { Lead, STAGE_CONFIG, BROKERS, DEVELOPMENTS } from '../types';
+import { Lead, STAGE_CONFIG, BROKERS as DEFAULT_BROKERS, DEVELOPMENTS as DEFAULT_DEVELOPMENTS, ThemeMode, BorderMode } from '../types';
 
 interface ReportsViewProps {
   leads: Lead[];
+  availableBrokers?: string[];
+  availableDevelopments?: string[];
+  theme?: ThemeMode;
+  borderMode?: BorderMode;
 }
 
-export const ReportsView: React.FC<ReportsViewProps> = ({ leads }) => {
+export const ReportsView: React.FC<ReportsViewProps> = ({ 
+  leads,
+  availableBrokers = DEFAULT_BROKERS,
+  availableDevelopments = DEFAULT_DEVELOPMENTS,
+  theme = 'bordo',
+  borderMode = 'destacada'
+}) => {
+  const brokersList = availableBrokers.length > 0 ? availableBrokers : DEFAULT_BROKERS;
+  const developmentsList = availableDevelopments.length > 0 ? availableDevelopments : DEFAULT_DEVELOPMENTS;
+
   const [reportType, setReportType] = useState<'general' | 'broker' | 'development'>('general');
-  const [selectedBroker, setSelectedBroker] = useState<string>(BROKERS[0]);
-  const [selectedDevelopment, setSelectedDevelopment] = useState<string>(DEVELOPMENTS[0]);
+  const [selectedBroker, setSelectedBroker] = useState<string>(brokersList[0]);
+  const [selectedDevelopment, setSelectedDevelopment] = useState<string>(developmentsList[0]);
+
+  // Keep selected broker/development synchronized if list changes
+  useEffect(() => {
+    if (!brokersList.includes(selectedBroker) && brokersList.length > 0) {
+      setSelectedBroker(brokersList[0]);
+    }
+  }, [brokersList, selectedBroker]);
+
+  useEffect(() => {
+    if (!developmentsList.includes(selectedDevelopment) && developmentsList.length > 0) {
+      setSelectedDevelopment(developmentsList[0]);
+    }
+  }, [developmentsList, selectedDevelopment]);
 
   // Filtered leads based on report type
   const reportLeads = leads.filter(l => {
@@ -30,24 +56,29 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ leads }) => {
   const exportExcel = () => {
     const headers = ['Cliente', 'Telefone', 'E-mail', 'Corretor', 'Empreendimento', 'Origem', 'Status', 'Unidade', 'Valor VGV', 'Data Visita'];
     const rows = reportLeads.map(l => [
-      `"${l.clientName}"`,
-      `"${l.clientPhone}"`,
-      `"${l.clientEmail || ''}"`,
-      `"${l.brokerName}"`,
-      `"${l.development}"`,
-      `"${l.origin}"`,
-      `"${STAGE_CONFIG[l.status]?.label || l.status}"`,
-      `"${l.propertyUnit}"`,
+      `"${l.clientName.replace(/"/g, '""')}"`,
+      `"${l.clientPhone.replace(/"/g, '""')}"`,
+      `"${(l.clientEmail || '').replace(/"/g, '""')}"`,
+      `"${l.brokerName.replace(/"/g, '""')}"`,
+      `"${l.development.replace(/"/g, '""')}"`,
+      `"${l.origin.replace(/"/g, '""')}"`,
+      `"${(STAGE_CONFIG[l.status]?.label || l.status).replace(/"/g, '""')}"`,
+      `"${(l.propertyUnit || '').replace(/"/g, '""')}"`,
       l.propertyValue,
-      `"${l.visitDate || ''}"`
+      `"${(l.visitDate || '').replace(/"/g, '""')}"`
     ]);
 
-    const csvContent = "\uFEFF" + [headers.join(';'), ...rows.map(e => e.join(';'))].join('\n');
+    const csvContent = "\uFEFF" + [headers.join(';'), ...rows.map(e => e.join(';'))].join('\r\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `relatorio_immoflow_${reportType}_${new Date().toISOString().slice(0, 10)}.csv`);
+    const fileName = reportType === 'broker' 
+      ? `relatorio_corretor_${selectedBroker.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`
+      : reportType === 'development'
+      ? `relatorio_empreendimento_${selectedDevelopment.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`
+      : `relatorio_geral_immoflow_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.setAttribute('download', fileName);
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -57,19 +88,40 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ leads }) => {
     window.print();
   };
 
+  const getContainerBorder = () => {
+    if (borderMode === 'destacada') {
+      switch (theme) {
+        case 'bordo': return 'border-2 border-rose-300 dark:border-rose-900/60 shadow-md';
+        case 'azul': return 'border-2 border-blue-300 dark:border-blue-900/60 shadow-md';
+        case 'esmeralda': return 'border-2 border-emerald-300 dark:border-emerald-900/60 shadow-md';
+        case 'dourado': return 'border-2 border-amber-300 dark:border-amber-900/60 shadow-md';
+      }
+    }
+    return 'border border-slate-200 dark:border-slate-800 shadow-sm';
+  };
+
+  const getThemeButtonBg = () => {
+    switch (theme) {
+      case 'bordo': return 'bg-rose-900 hover:bg-rose-800 text-white';
+      case 'azul': return 'bg-blue-600 hover:bg-blue-700 text-white';
+      case 'esmeralda': return 'bg-emerald-700 hover:bg-emerald-800 text-white';
+      case 'dourado': return 'bg-amber-600 hover:bg-amber-700 text-white';
+    }
+  };
+
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-300">
       
       {/* Header & Controls */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4 print:hidden">
+      <div className={`bg-white dark:bg-slate-900 rounded-2xl p-6 ${getContainerBorder()} space-y-4 print:hidden`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600" />
+              <FileText className={`w-5 h-5 ${theme === 'bordo' ? 'text-rose-700' : 'text-blue-600'}`} />
               <span>Central de Relatórios & Exportação (Excel & PDF)</span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Gere relatórios gerenciais gerais ou individuais por corretor e empreendimento.
+              Gere relatórios gerenciais consolidados gerais ou individuais por corretor e empreendimento.
             </p>
           </div>
 
@@ -83,10 +135,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ leads }) => {
             </button>
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg shadow-sm transition-all cursor-pointer"
+              className={`flex items-center gap-2 px-4 py-2 ${getThemeButtonBg()} font-medium text-sm rounded-lg shadow-sm transition-all cursor-pointer`}
             >
               <Printer className="w-4 h-4" />
-              <span>Imprimir / PDF</span>
+              <span>Imprimir / Salvar PDF</span>
             </button>
           </div>
         </div>
@@ -100,7 +152,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ leads }) => {
             <select
               value={reportType}
               onChange={(e) => setReportType(e.target.value as any)}
-              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-medium"
+              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-medium cursor-pointer"
             >
               <option value="general">Relatório Geral (Todos os Leads)</option>
               <option value="broker">Relatório Individual por Corretor</option>
@@ -111,14 +163,14 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ leads }) => {
           {reportType === 'broker' && (
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Selecionar Corretor
+                Selecionar Corretor ({brokersList.length} cadastrados)
               </label>
               <select
                 value={selectedBroker}
                 onChange={(e) => setSelectedBroker(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-medium"
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-medium cursor-pointer"
               >
-                {BROKERS.map(b => (
+                {brokersList.map(b => (
                   <option key={b} value={b}>{b}</option>
                 ))}
               </select>
@@ -128,14 +180,14 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ leads }) => {
           {reportType === 'development' && (
             <div>
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Selecionar Empreendimento
+                Selecionar Empreendimento ({developmentsList.length} cadastrados)
               </label>
               <select
                 value={selectedDevelopment}
                 onChange={(e) => setSelectedDevelopment(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-medium"
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-medium cursor-pointer"
               >
-                {DEVELOPMENTS.map(d => (
+                {developmentsList.map(d => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
@@ -145,7 +197,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ leads }) => {
       </div>
 
       {/* Printable Report Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6 print:border-none print:shadow-none print:p-0">
+      <div className={`bg-white dark:bg-slate-900 ${getContainerBorder()} rounded-2xl p-6 sm:p-8 space-y-6 print:border-none print:shadow-none print:p-0`}>
         
         {/* Report Header */}
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-6">

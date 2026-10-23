@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Phone, Mail, Building, MapPin, DollarSign, Calendar, FileText, Check } from 'lucide-react';
-import { Lead, PipelineStage, STAGE_CONFIG, ORIGINS, DEVELOPMENTS, BROKERS } from '../types';
+import { X, User, Phone, Mail, Building, DollarSign, Calendar, Check, AlertCircle } from 'lucide-react';
+import { Lead, PipelineStage, STAGE_CONFIG, ORIGINS as DEFAULT_ORIGINS, DEVELOPMENTS as DEFAULT_DEVELOPMENTS, BROKERS as DEFAULT_BROKERS, ThemeMode, BorderMode } from '../types';
 
 interface LeadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (leadData: Partial<Lead>) => void;
   leadToEdit?: Lead | null;
+  availableBrokers?: string[];
+  availableDevelopments?: string[];
+  availableOrigins?: string[];
+  theme?: ThemeMode;
+  borderMode?: BorderMode;
 }
 
 export const LeadModal: React.FC<LeadModalProps> = ({
@@ -14,14 +19,25 @@ export const LeadModal: React.FC<LeadModalProps> = ({
   onClose,
   onSave,
   leadToEdit,
+  availableBrokers = DEFAULT_BROKERS,
+  availableDevelopments = DEFAULT_DEVELOPMENTS,
+  availableOrigins = DEFAULT_ORIGINS,
+  theme = 'bordo',
+  borderMode = 'destacada'
 }) => {
+  const brokersList = availableBrokers.length > 0 ? availableBrokers : DEFAULT_BROKERS;
+  const developmentsList = availableDevelopments.length > 0 ? availableDevelopments : DEFAULT_DEVELOPMENTS;
+  const originsList = availableOrigins.length > 0 ? availableOrigins : DEFAULT_ORIGINS;
+
+  const [formError, setFormError] = useState<string | null>(null);
+
   const [formData, setFormData] = useState<Partial<Lead>>({
     clientName: '',
     clientPhone: '',
     clientEmail: '',
-    brokerName: BROKERS[0],
-    development: DEVELOPMENTS[0],
-    origin: ORIGINS[0],
+    brokerName: brokersList[0],
+    development: developmentsList[0],
+    origin: originsList[0],
     status: 'lead',
     propertyUnit: '',
     propertyValue: 400000,
@@ -36,6 +52,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
   });
 
   useEffect(() => {
+    setFormError(null);
     if (leadToEdit) {
       setFormData(leadToEdit);
     } else {
@@ -43,9 +60,9 @@ export const LeadModal: React.FC<LeadModalProps> = ({
         clientName: '',
         clientPhone: '',
         clientEmail: '',
-        brokerName: BROKERS[0],
-        development: DEVELOPMENTS[0],
-        origin: ORIGINS[0],
+        brokerName: brokersList[0],
+        development: developmentsList[0],
+        origin: originsList[0],
         status: 'lead',
         propertyUnit: '',
         propertyValue: 450000,
@@ -65,31 +82,41 @@ export const LeadModal: React.FC<LeadModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.clientName || !formData.clientPhone) {
-      alert('Por favor, preencha ao menos o Nome e o Telefone do cliente.');
+    if (!formData.clientName?.trim() || !formData.clientPhone?.trim()) {
+      setFormError('Por favor, informe ao menos o Nome e o Telefone do cliente.');
       return;
     }
     onSave(formData);
     onClose();
   };
 
+  const borderClass = borderMode === 'destacada'
+    ? theme === 'bordo' ? 'border-2 border-rose-800' : 'border-2 border-blue-600'
+    : 'border border-slate-200 dark:border-slate-800';
+
+  const primaryBtnClass = theme === 'bordo'
+    ? 'bg-rose-900 hover:bg-rose-800 text-white shadow-rose-900/20'
+    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+      <div className={`bg-white dark:bg-slate-900 ${borderClass} rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200`}>
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+        <div className={`flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 ${
+          theme === 'bordo' ? 'bg-rose-950 text-white' : 'bg-slate-50 dark:bg-slate-800/50'
+        }`}>
           <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+            <h2 className="text-lg font-bold">
               {leadToEdit ? 'Editar Lead / Cliente' : 'Novo Lead / Atendimento'}
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className={`text-xs ${theme === 'bordo' ? 'text-rose-200' : 'text-slate-500 dark:text-slate-400'}`}>
               Preencha os dados do cliente, origem, visita e análise de crédito.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -98,9 +125,16 @@ export const LeadModal: React.FC<LeadModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
           
+          {formError && (
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-xl flex items-center gap-2 text-xs text-rose-700 dark:text-rose-300 font-semibold">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
+
           {/* Client Details */}
           <div className="space-y-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+            <h3 className={`text-xs font-semibold uppercase tracking-wider ${theme === 'bordo' ? 'text-rose-700 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400'}`}>
               1. Dados do Cliente
             </h3>
             
@@ -115,9 +149,9 @@ export const LeadModal: React.FC<LeadModalProps> = ({
                     type="text"
                     required
                     value={formData.clientName || ''}
-                    onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                    onChange={(e) => { setFormError(null); setFormData({ ...formData, clientName: e.target.value }); }}
                     placeholder="Ex: Roberto Carlos"
-                    className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                    className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -132,9 +166,9 @@ export const LeadModal: React.FC<LeadModalProps> = ({
                     type="text"
                     required
                     value={formData.clientPhone || ''}
-                    onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
+                    onChange={(e) => { setFormError(null); setFormData({ ...formData, clientPhone: e.target.value }); }}
                     placeholder="Ex: (11) 99999-9999"
-                    className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                    className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -150,7 +184,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
                     value={formData.clientEmail || ''}
                     onChange={(e) => setFormData({ ...formData, clientEmail: e.target.value })}
                     placeholder="cliente@email.com"
-                    className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                    className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -159,7 +193,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
 
           {/* Property & Assignment */}
           <div className="space-y-4 pt-2 border-t border-slate-200 dark:border-slate-800">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+            <h3 className={`text-xs font-semibold uppercase tracking-wider ${theme === 'bordo' ? 'text-rose-700 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400'}`}>
               2. Empreendimento, Corretor e Origem
             </h3>
 
@@ -171,11 +205,11 @@ export const LeadModal: React.FC<LeadModalProps> = ({
                 <div className="relative">
                   <Building className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
                   <select
-                    value={formData.development || DEVELOPMENTS[0]}
+                    value={formData.development || developmentsList[0]}
                     onChange={(e) => setFormData({ ...formData, development: e.target.value })}
-                    className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                    className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
                   >
-                    {DEVELOPMENTS.map((dev) => (
+                    {developmentsList.map((dev) => (
                       <option key={dev} value={dev}>{dev}</option>
                     ))}
                   </select>
@@ -187,11 +221,11 @@ export const LeadModal: React.FC<LeadModalProps> = ({
                   Corretor Responsável
                 </label>
                 <select
-                  value={formData.brokerName || BROKERS[0]}
+                  value={formData.brokerName || brokersList[0]}
                   onChange={(e) => setFormData({ ...formData, brokerName: e.target.value })}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
                 >
-                  {BROKERS.map((broker) => (
+                  {brokersList.map((broker) => (
                     <option key={broker} value={broker}>{broker}</option>
                   ))}
                 </select>
@@ -202,11 +236,11 @@ export const LeadModal: React.FC<LeadModalProps> = ({
                   Origem do Lead
                 </label>
                 <select
-                  value={formData.origin || ORIGINS[0]}
+                  value={formData.origin || originsList[0]}
                   onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
                 >
-                  {ORIGINS.map((orig) => (
+                  {originsList.map((orig) => (
                     <option key={orig} value={orig}>{orig}</option>
                   ))}
                 </select>
@@ -219,7 +253,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
                 <select
                   value={formData.status || 'lead'}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as PipelineStage })}
-                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white font-medium"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white font-medium"
                 >
                   {Object.entries(STAGE_CONFIG).map(([key, config]) => (
                     <option key={key} value={key}>{config.label}</option>
@@ -236,7 +270,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
                   value={formData.propertyUnit || ''}
                   onChange={(e) => setFormData({ ...formData, propertyUnit: e.target.value })}
                   placeholder="Ex: Apto 302 / Lote 12"
-                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
                 />
               </div>
 
@@ -250,7 +284,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
                     type="number"
                     value={formData.propertyValue || 0}
                     onChange={(e) => setFormData({ ...formData, propertyValue: Number(e.target.value) })}
-                    className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                    className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -265,7 +299,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
                     type="datetime-local"
                     value={formData.visitDate || ''}
                     onChange={(e) => setFormData({ ...formData, visitDate: e.target.value })}
-                    className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                    className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -282,7 +316,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
               value={formData.notes || ''}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               placeholder="Detalhes da conversa, perfil do cliente, pendências de documentos..."
-              className="w-full p-3 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+              className="w-full p-3 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
             />
           </div>
 
@@ -291,13 +325,13 @@ export const LeadModal: React.FC<LeadModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm shadow-blue-500/20 transition-all cursor-pointer flex items-center gap-2"
+              className={`px-5 py-2 text-sm font-medium rounded-lg shadow-sm transition-all cursor-pointer flex items-center gap-2 ${primaryBtnClass}`}
             >
               <Check className="w-4 h-4" />
               <span>{leadToEdit ? 'Salvar Alterações' : 'Cadastrar Lead'}</span>

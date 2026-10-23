@@ -1,21 +1,12 @@
 import React, { useState } from 'react';
 import { 
   Search, 
-  Filter, 
   Plus, 
   MessageCircle, 
   Edit3, 
-  Trash2, 
-  Building, 
-  User, 
-  Phone, 
-  Mail, 
-  Calendar,
-  CheckCircle2,
-  XCircle,
-  AlertCircle
+  Trash2
 } from 'lucide-react';
-import { Lead, PipelineStage, STAGE_CONFIG, ORIGINS, DEVELOPMENTS, BROKERS } from '../types';
+import { Lead, PipelineStage, STAGE_CONFIG, ORIGINS as DEFAULT_ORIGINS, DEVELOPMENTS as DEFAULT_DEVELOPMENTS, BROKERS as DEFAULT_BROKERS, ThemeMode, BorderMode } from '../types';
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -24,6 +15,11 @@ interface LeadsTableProps {
   onDeleteLead: (leadId: string) => void;
   onSelectLead: (lead: Lead) => void;
   onUpdateStatus: (leadId: string, status: PipelineStage) => void;
+  availableBrokers?: string[];
+  availableDevelopments?: string[];
+  availableOrigins?: string[];
+  theme?: ThemeMode;
+  borderMode?: BorderMode;
 }
 
 export const LeadsTable: React.FC<LeadsTableProps> = ({
@@ -33,6 +29,11 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
   onDeleteLead,
   onSelectLead,
   onUpdateStatus,
+  availableBrokers = DEFAULT_BROKERS,
+  availableDevelopments = DEFAULT_DEVELOPMENTS,
+  availableOrigins = DEFAULT_ORIGINS,
+  theme = 'bordo',
+  borderMode = 'destacada'
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -62,14 +63,28 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
   const openWhatsApp = (phone: string, clientName: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
     const message = encodeURIComponent(`Olá ${clientName}, tudo bem? Entrando em contato referente ao seu atendimento no plantão...`);
-    window.open(`https://wa.me/55${cleanPhone}?text=${message}`, '_blank');
+    const link = document.createElement('a');
+    link.href = `https://wa.me/55${cleanPhone}?text=${message}`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
+
+  const borderClass = borderMode === 'destacada'
+    ? theme === 'bordo' ? 'border-2 border-rose-800/50 shadow-md' : 'border-2 border-blue-600/50 shadow-md'
+    : 'border border-slate-200 dark:border-slate-800 shadow-xs';
+
+  const primaryBtnClass = theme === 'bordo'
+    ? 'bg-rose-900 hover:bg-rose-800 text-white'
+    : 'bg-blue-600 hover:bg-blue-700 text-white';
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       
       {/* Header & Controls */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+      <div className={`bg-white dark:bg-slate-900 ${borderClass} rounded-2xl p-6 space-y-4`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">
@@ -82,7 +97,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
 
           <button
             onClick={onOpenNewLeadModal}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg shadow-sm transition-all cursor-pointer self-start"
+            className={`flex items-center gap-2 px-4 py-2 font-medium text-sm rounded-lg shadow-sm transition-all cursor-pointer self-start ${primaryBtnClass}`}
           >
             <Plus className="w-4 h-4" />
             <span>Novo Atendimento</span>
@@ -99,7 +114,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar cliente, tel, unidade..."
-              className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+              className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
             />
           </div>
 
@@ -107,7 +122,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
             >
               <option value="all">Todos os Status</option>
               {Object.entries(STAGE_CONFIG).map(([key, config]) => (
@@ -120,10 +135,10 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
             <select
               value={filterBroker}
               onChange={(e) => setFilterBroker(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
             >
-              <option value="all">Todos os Corretores</option>
-              {BROKERS.map(b => (
+              <option value="all">Todos os Corretores ({availableBrokers.length})</option>
+              {availableBrokers.map(b => (
                 <option key={b} value={b}>{b}</option>
               ))}
             </select>
@@ -133,10 +148,10 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
             <select
               value={filterDevelopment}
               onChange={(e) => setFilterDevelopment(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
             >
-              <option value="all">Todos Empreendimentos</option>
-              {DEVELOPMENTS.map(d => (
+              <option value="all">Todos Empreendimentos ({availableDevelopments.length})</option>
+              {availableDevelopments.map(d => (
                 <option key={d} value={d}>{d}</option>
               ))}
             </select>
@@ -146,10 +161,10 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
             <select
               value={filterOrigin}
               onChange={(e) => setFilterOrigin(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
             >
-              <option value="all">Todas as Origens</option>
-              {ORIGINS.map(o => (
+              <option value="all">Todas as Origens ({availableOrigins.length})</option>
+              {availableOrigins.map(o => (
                 <option key={o} value={o}>{o}</option>
               ))}
             </select>
@@ -159,7 +174,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
       </div>
 
       {/* Leads Table Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+      <div className={`bg-white dark:bg-slate-900 ${borderClass} rounded-2xl shadow-sm overflow-hidden`}>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
@@ -191,7 +206,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                       <td className="py-3 px-4">
                         <div 
                           onClick={() => onSelectLead(lead)}
-                          className="font-semibold text-slate-900 dark:text-white cursor-pointer hover:text-blue-600"
+                          className="font-semibold text-slate-900 dark:text-white cursor-pointer hover:text-rose-700 dark:hover:text-rose-400"
                         >
                           {lead.clientName}
                         </div>
@@ -235,21 +250,21 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                           <button
                             onClick={() => openWhatsApp(lead.clientPhone, lead.clientName)}
                             title="Abrir WhatsApp"
-                            className="p-1.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 rounded-lg transition-colors"
+                            className="p-1.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer"
                           >
                             <MessageCircle className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => onEditLead(lead)}
                             title="Editar Lead"
-                            className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 rounded-lg transition-colors"
+                            className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => onDeleteLead(lead.id)}
                             title="Excluir Lead"
-                            className="p-1.5 bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 hover:bg-rose-100 rounded-lg transition-colors"
+                            className="p-1.5 bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>

@@ -13,7 +13,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-import { Lead, PipelineStage, STAGE_CONFIG } from '../types';
+import { Lead, PipelineStage, STAGE_CONFIG, ThemeMode, BorderMode } from '../types';
 
 interface KanbanBoardProps {
   leads: Lead[];
@@ -21,6 +21,8 @@ interface KanbanBoardProps {
   onEditLead: (lead: Lead) => void;
   onDeleteLead: (leadId: string) => void;
   onSelectLead: (lead: Lead) => void;
+  theme?: ThemeMode;
+  borderMode?: BorderMode;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -29,6 +31,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onEditLead,
   onDeleteLead,
   onSelectLead,
+  theme = 'bordo',
+  borderMode = 'destacada',
 }) => {
   const stages: PipelineStage[] = [
     'lead',
@@ -70,17 +74,32 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     return map[current];
   };
 
-  const openWhatsApp = (phone: string, clientName: string) => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    const message = encodeURIComponent(`Olá ${clientName}, tudo bem? Aqui é da equipe de atendimento imobiliário...`);
-    window.open(`https://wa.me/55${cleanPhone}?text=${message}`, '_blank');
+  const getBorderClass = () => {
+    if (borderMode === 'destacada') {
+      switch (theme) {
+        case 'bordo': return 'border-2 border-rose-300 dark:border-rose-900/60 hover:border-rose-500 shadow-sm';
+        case 'azul': return 'border-2 border-blue-300 dark:border-blue-900/60 hover:border-blue-500 shadow-sm';
+        case 'esmeralda': return 'border-2 border-emerald-300 dark:border-emerald-900/60 hover:border-emerald-500 shadow-sm';
+        case 'dourado': return 'border-2 border-amber-300 dark:border-amber-900/60 hover:border-amber-500 shadow-sm';
+      }
+    }
+    return 'border border-slate-200 dark:border-slate-800';
+  };
+
+  const getNextBtnBg = () => {
+    switch (theme) {
+      case 'bordo': return 'bg-rose-900 hover:bg-rose-800 text-white';
+      case 'azul': return 'bg-blue-600 hover:bg-blue-700 text-white';
+      case 'esmeralda': return 'bg-emerald-700 hover:bg-emerald-800 text-white';
+      case 'dourado': return 'bg-amber-600 hover:bg-amber-700 text-white';
+    }
   };
 
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
       
       {/* Kanban Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl ${borderMode === 'destacada' ? 'border-2 border-rose-200 dark:border-rose-900/50' : 'border border-slate-200 dark:border-slate-800'} shadow-xs`}>
         <div>
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">
             Funil de Vendas & Acompanhamento de Leads
@@ -104,7 +123,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           return (
             <div 
               key={stageKey}
-              className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 flex flex-col min-w-[260px] max-h-[80vh]"
+              className={`bg-slate-50 dark:bg-slate-900/50 ${borderMode === 'destacada' ? 'border-2 border-slate-200 dark:border-slate-800' : 'border border-slate-200 dark:border-slate-800'} rounded-2xl p-3 flex flex-col min-w-[260px] max-h-[80vh]`}
             >
               {/* Column Header */}
               <div className={`p-3 rounded-xl ${config.bg} border ${config.border} mb-3 flex items-center justify-between`}>
@@ -135,7 +154,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     return (
                       <div
                         key={lead.id}
-                        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs hover:shadow-md transition-all group relative space-y-3"
+                        className={`bg-white dark:bg-slate-900 ${getBorderClass()} rounded-xl p-4 transition-all group relative space-y-3`}
                       >
                         {/* Top Card Row */}
                         <div className="flex items-start justify-between gap-2">
@@ -143,7 +162,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                             onClick={() => onSelectLead(lead)}
                             className="cursor-pointer"
                           >
-                            <h4 className="text-sm font-bold text-slate-900 dark:text-white hover:text-blue-600 transition-colors">
+                            <h4 className="text-sm font-bold text-slate-900 dark:text-white hover:text-rose-700 dark:hover:text-rose-400 transition-colors">
                               {lead.clientName}
                             </h4>
                             <p className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
@@ -156,14 +175,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                             <button
                               onClick={() => onEditLead(lead)}
                               title="Editar"
-                              className="p-1 text-slate-400 hover:text-blue-600 rounded"
+                              className="p-1 text-slate-400 hover:text-blue-600 rounded cursor-pointer"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => onDeleteLead(lead.id)}
                               title="Excluir"
-                              className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                              className="p-1 text-slate-400 hover:text-rose-600 rounded cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -197,21 +216,23 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
                         {/* Action Buttons & Quick Move */}
                         <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                          <button
-                            onClick={() => openWhatsApp(lead.clientPhone, lead.clientName)}
-                            title="Abrir WhatsApp"
-                            className="p-1.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium"
+                          <a
+                            href={`https://wa.me/55${lead.clientPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${lead.clientName}, tudo bem? Aqui é da equipe de atendimento imobiliário sobre o ${lead.development}...`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Abrir conversa no WhatsApp"
+                            className="p-1.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 rounded-lg transition-colors flex items-center gap-1 text-xs font-medium cursor-pointer"
                           >
                             <MessageCircle className="w-3.5 h-3.5" />
                             <span>WhatsApp</span>
-                          </button>
+                          </a>
 
                           <div className="flex items-center gap-1">
                             {prev && (
                               <button
                                 onClick={() => onUpdateStatus(lead.id, prev)}
                                 title="Mover para etapa anterior"
-                                className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 rounded-lg transition-colors"
+                                className="p-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
                               >
                                 <ChevronLeft className="w-3.5 h-3.5" />
                               </button>
@@ -220,7 +241,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                               <button
                                 onClick={() => onUpdateStatus(lead.id, next)}
                                 title="Avançar para próxima etapa"
-                                className="p-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-xs transition-colors"
+                                className={`p-1.5 ${getNextBtnBg()} rounded-lg shadow-xs transition-colors cursor-pointer`}
                               >
                                 <ChevronRight className="w-3.5 h-3.5" />
                               </button>

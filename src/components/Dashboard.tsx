@@ -17,25 +17,31 @@ import {
   Edit2,
   Check
 } from 'lucide-react';
-import { Lead, STAGE_CONFIG, BROKERS } from '../types';
+import { Lead, STAGE_CONFIG, BrokerItem, ThemeMode, BorderMode } from '../types';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 
 interface DashboardProps {
   leads: Lead[];
   onSelectLead: (lead: Lead) => void;
   onNavigateTab: (tab: string) => void;
+  brokers?: BrokerItem[];
+  theme?: ThemeMode;
+  borderMode?: BorderMode;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
   leads,
   onSelectLead,
   onNavigateTab,
+  brokers = [],
+  theme = 'bordo',
+  borderMode = 'destacada',
 }) => {
-  // Monthly sales goals per broker (default R$ 1,200,000 each)
+  // Monthly sales goals per broker
   const [brokerGoals, setBrokerGoals] = useState<Record<string, number>>(() => {
     const defaultGoals: Record<string, number> = {};
-    BROKERS.forEach(b => {
-      defaultGoals[b] = 1200000; // R$ 1.2M default goal
+    brokers.forEach(b => {
+      defaultGoals[b.name] = b.monthlyGoal || 1200000;
     });
     return defaultGoals;
   });
@@ -68,17 +74,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
     originStats[l.origin] = (originStats[l.origin] || 0) + 1;
   });
 
-  const originChartData = Object.entries(originStats).map(([name, value]) => ({
-    name,
-    value,
-  }));
+  const originChartData = Object.entries(originStats)
+    .map(([name, value]) => ({
+      name,
+      value,
+    }))
+    .sort((a, b) => b.value - a.value);
 
-  const COLORS = ['#2563eb', '#4f46e5', '#7c3aed', '#db2777', '#059669', '#d97706', '#0284c7', '#9333ea'];
+  const COLORS = theme === 'bordo' 
+    ? ['#881337', '#9f1239', '#be123c', '#e11d48', '#f43f5e', '#b91c1c', '#c2410c', '#b45309']
+    : ['#2563eb', '#4f46e5', '#7c3aed', '#db2777', '#059669', '#d97706', '#0284c7', '#9333ea'];
 
   // Broker stats
   const brokerStats: Record<string, { count: number; sales: number; vgv: number }> = {};
-  BROKERS.forEach(b => {
-    brokerStats[b] = { count: 0, sales: 0, vgv: 0 };
+  brokers.forEach(b => {
+    brokerStats[b.name] = { count: 0, sales: 0, vgv: 0 };
   });
 
   leads.forEach(l => {
@@ -99,13 +109,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const openWhatsApp = (phone: string, clientName: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
     const message = encodeURIComponent(`Olá ${clientName}, tudo bem? Confirmando nossa visita ao plantão hoje...`);
-    window.open(`https://wa.me/55${cleanPhone}?text=${message}`, '_blank');
+    const link = document.createElement('a');
+    link.href = `https://wa.me/55${cleanPhone}?text=${message}`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   const handleSaveGoal = (brokerName: string) => {
     setBrokerGoals(prev => ({ ...prev, [brokerName]: tempGoal }));
     setEditingBroker(null);
   };
+
+  const borderClass = borderMode === 'destacada'
+    ? theme === 'bordo' ? 'border-2 border-rose-800/60 shadow-md' : 'border-2 border-blue-600/50 shadow-md'
+    : 'border border-slate-200 dark:border-slate-800 shadow-xs';
+
+  const bannerClass = theme === 'bordo'
+    ? 'bg-gradient-to-r from-rose-950 via-red-900 to-rose-900 shadow-xl shadow-rose-950/20'
+    : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-700 shadow-xl shadow-blue-500/10';
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-300">
@@ -156,28 +180,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
       )}
 
       {/* Top Banner / Welcome */}
-      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-700 rounded-2xl p-6 sm:p-8 text-white shadow-xl shadow-blue-500/10">
+      <div className={`rounded-2xl p-6 sm:p-8 text-white ${bannerClass}`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-semibold mb-3">
-              <TrendingUp className="w-3.5 h-3.5 text-blue-200" />
+              <TrendingUp className="w-3.5 h-3.5 text-rose-200" />
               <span>Painel de Controle de Vendas & Plantão</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               Visão Geral do ImmoFlow
             </h1>
-            <p className="text-blue-100 text-sm mt-1 max-w-xl">
+            <p className="text-white/80 text-sm mt-1 max-w-xl">
               Monitore a captação de leads por origem, visitas ao plantão, montagem de pastas, status de crédito e fechamento de VGV.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-3">
             <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/15 min-w-[140px]">
-              <p className="text-xs text-blue-200 font-medium">VGV Total Fechado</p>
+              <p className="text-xs text-rose-200 font-medium">VGV Total Fechado</p>
               <p className="text-xl sm:text-2xl font-bold mt-0.5">{formatCurrency(totalVGV)}</p>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/15 min-w-[140px]">
-              <p className="text-xs text-blue-200 font-medium">Vendas Realizadas</p>
+              <p className="text-xs text-rose-200 font-medium">Vendas Realizadas</p>
               <p className="text-xl sm:text-2xl font-bold mt-0.5">{salesCount} contratos</p>
             </div>
           </div>
@@ -189,13 +213,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
         
         <div 
           onClick={() => onNavigateTab('kanban')}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+          className={`bg-white dark:bg-slate-900 ${borderClass} rounded-2xl p-5 hover:shadow-md transition-all cursor-pointer group`}
         >
           <div className="flex items-center justify-between">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform ${
+              theme === 'bordo' ? 'bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300' : 'bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400'
+            }`}>
               <Users className="w-5 h-5" />
             </div>
-            <span className="text-xs font-semibold px-2 py-0.5 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-full">
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+              theme === 'bordo' ? 'bg-rose-50 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300' : 'bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400'
+            }`}>
               Ativos
             </span>
           </div>
@@ -207,7 +235,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div 
           onClick={() => onNavigateTab('kanban')}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+          className={`bg-white dark:bg-slate-900 ${borderClass} rounded-2xl p-5 hover:shadow-md transition-all cursor-pointer group relative overflow-hidden`}
         >
           {todayVisits.length > 0 && (
             <span className="absolute top-0 right-0 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg animate-pulse">
@@ -237,7 +265,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div 
           onClick={() => onNavigateTab('kanban')}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+          className={`bg-white dark:bg-slate-900 ${borderClass} rounded-2xl p-5 hover:shadow-md transition-all cursor-pointer group`}
         >
           <div className="flex items-center justify-between">
             <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -255,7 +283,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div 
           onClick={() => onNavigateTab('kanban')}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+          className={`bg-white dark:bg-slate-900 ${borderClass} rounded-2xl p-5 hover:shadow-md transition-all cursor-pointer group`}
         >
           <div className="flex items-center justify-between">
             <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -277,7 +305,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Credit Analysis Status Cards */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+        <div className={`bg-white dark:bg-slate-900 ${borderClass} rounded-2xl p-6`}>
           <h3 className="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-emerald-500" />
             <span>Status da Análise de Crédito</span>
@@ -310,51 +338,109 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        {/* Lead Origins Pie Chart (Recharts) */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm lg:col-span-2 flex flex-col">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <PieChartIcon className="w-5 h-5 text-blue-500" />
-              <span>Distribuição de Leads por Origem (Canais de Marketing)</span>
-            </h3>
-            <span className="text-xs text-slate-500 font-medium">Eficiência de Captação</span>
+        {/* Lead Origins Donut Chart & Structured Breakdown (Clean, anti-overflow) */}
+        <div className={`bg-white dark:bg-slate-900 ${borderClass} rounded-2xl p-6 lg:col-span-2 flex flex-col overflow-hidden`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <PieChartIcon className={`w-5 h-5 flex-shrink-0 ${theme === 'bordo' ? 'text-rose-700' : 'text-blue-500'}`} />
+                <span>Distribuição de Leads por Origem</span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Canais de marketing e eficiência na geração de contatos
+              </p>
+            </div>
+            <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg self-start sm:self-auto">
+              {originChartData.length} canais ativos
+            </span>
           </div>
 
-          <div className="h-[280px] w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={originChartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={70}
-                  outerRadius={105}
-                  paddingAngle={4}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`}
-                  labelLine={false}
-                >
-                  {originChartData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  formatter={(value: any) => [`${value} leads`, 'Quantidade']}
-                  contentStyle={{ 
-                    backgroundColor: '#1e293b', 
-                    border: 'none', 
-                    borderRadius: '8px', 
-                    color: '#fff',
-                    fontSize: '12px'
-                  }}
-                />
-                <Legend 
-                  verticalAlign="bottom" 
-                  height={36} 
-                  formatter={(value) => <span className="text-xs text-slate-700 dark:text-slate-300 font-medium">{value}</span>}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+            {/* Left: Donut Chart with Centered Total Counter */}
+            <div className="md:col-span-5 relative flex items-center justify-center min-h-[220px]">
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie
+                    data={originChartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={62}
+                    outerRadius={88}
+                    paddingAngle={3}
+                    dataKey="value"
+                    isAnimationActive={true}
+                  >
+                    {originChartData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value: any, name: any) => [
+                      `${value} leads (${((Number(value) / (totalLeads || 1)) * 100).toFixed(0)}%)`, 
+                      name
+                    ]}
+                    contentStyle={{ 
+                      backgroundColor: '#0f172a', 
+                      border: '1px solid #334155', 
+                      borderRadius: '10px', 
+                      color: '#fff',
+                      fontSize: '12px'
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              {/* Donut Center Label */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">
+                  {totalLeads}
+                </span>
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">
+                  Total Leads
+                </span>
+              </div>
+            </div>
+
+            {/* Right: Structured Channels Ranking List (no overflow, completely legible) */}
+            <div className="md:col-span-7 space-y-2 max-h-[260px] overflow-y-auto pr-1">
+              {originChartData.map((item, index) => {
+                const percent = totalLeads > 0 ? Math.round((item.value / totalLeads) * 100) : 0;
+                const color = COLORS[index % COLORS.length];
+
+                return (
+                  <div 
+                    key={item.name}
+                    className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800/80 hover:bg-slate-100/80 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span 
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
+                          style={{ backgroundColor: color }} 
+                        />
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                          {item.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
+                        <span className="font-bold text-slate-900 dark:text-white">
+                          {item.value} {item.value === 1 ? 'lead' : 'leads'}
+                        </span>
+                        <span className="text-slate-400 dark:text-slate-500">
+                          ({percent}%)
+                        </span>
+                      </div>
+                    </div>
+                    {/* Channel Progress Bar */}
+                    <div className="w-full h-1.5 bg-slate-200/70 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full rounded-full transition-all duration-500" 
+                        style={{ width: `${percent}%`, backgroundColor: color }} 
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -364,27 +450,34 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Monthly Sales Goals Progress Bars */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Target className="w-5 h-5 text-blue-600" />
-              <span>Metas Mensais por Corretor</span>
-            </h3>
-            <span className="text-xs text-slate-500 font-medium">VGV Real vs Meta</span>
+        <div className={`bg-white dark:bg-slate-900 ${borderClass} rounded-2xl p-6 space-y-4 overflow-hidden`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-200 dark:border-slate-800 pb-3">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Target className={`w-5 h-5 flex-shrink-0 ${theme === 'bordo' ? 'text-rose-800' : 'text-blue-600'}`} />
+                <span>Metas Mensais por Corretor</span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                VGV Real fechado vs Meta estipulada
+              </p>
+            </div>
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 self-start sm:self-auto">
+              {brokers.length} corretores
+            </span>
           </div>
 
           <div className="space-y-4 max-h-[360px] overflow-y-auto pr-1">
-            {BROKERS.map((broker) => {
-              const stats = brokerStats[broker] || { count: 0, sales: 0, vgv: 0 };
-              const goal = brokerGoals[broker] || 1200000;
+            {brokers.map((broker) => {
+              const stats = brokerStats[broker.name] || { count: 0, sales: 0, vgv: 0 };
+              const goal = brokerGoals[broker.name] || broker.monthlyGoal || 1200000;
               const percentage = Math.min(Math.round((stats.vgv / goal) * 100), 100);
-              const isEditing = editingBroker === broker;
+              const isEditing = editingBroker === broker.name;
 
               return (
-                <div key={broker} className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 space-y-2">
+                <div key={broker.id} className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 space-y-2">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{broker}</p>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{broker.name}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
                         {stats.sales} vendas fechadas ({formatCurrency(stats.vgv)})
                       </p>
@@ -400,20 +493,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             className="w-24 px-2 py-1 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-slate-900 dark:text-white"
                           />
                           <button
-                            onClick={() => handleSaveGoal(broker)}
-                            className="p-1 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                            onClick={() => handleSaveGoal(broker.name)}
+                            className="p-1 bg-emerald-600 text-white rounded hover:bg-emerald-700 cursor-pointer"
                           >
                             <Check className="w-3 h-3" />
                           </button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5 justify-end">
-                          <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                          <span className={`text-xs font-bold ${theme === 'bordo' ? 'text-rose-800 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400'}`}>
                             Meta: {formatCurrency(goal)}
                           </span>
                           <button
-                            onClick={() => { setEditingBroker(broker); setTempGoal(goal); }}
-                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                            onClick={() => { setEditingBroker(broker.name); setTempGoal(goal); }}
+                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                             title="Editar Meta"
                           >
                             <Edit2 className="w-3 h-3" />
@@ -427,7 +520,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <div className="space-y-1">
                     <div className="flex justify-between text-[11px] font-medium text-slate-600 dark:text-slate-400">
                       <span>Progresso</span>
-                      <span className={`font-bold ${percentage >= 100 ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                      <span className={`font-bold ${percentage >= 100 ? 'text-emerald-600 dark:text-emerald-400' : theme === 'bordo' ? 'text-rose-800 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400'}`}>
                         {percentage}% {percentage >= 100 ? '🎉 (Meta Atingida!)' : ''}
                       </span>
                     </div>
@@ -437,7 +530,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           percentage >= 100 
                             ? 'bg-emerald-500' 
                             : percentage >= 50 
-                            ? 'bg-blue-600' 
+                            ? theme === 'bordo' ? 'bg-rose-900' : 'bg-blue-600'
                             : 'bg-amber-500'
                         }`} 
                         style={{ width: `${percentage}%` }}
@@ -451,14 +544,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Recent Leads Table Preview */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm lg:col-span-2 flex flex-col">
+        <div className={`bg-white dark:bg-slate-900 ${borderClass} rounded-2xl p-6 lg:col-span-2 flex flex-col`}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">
               Últimos Leads e Atendimentos Recentes
             </h3>
             <button
               onClick={() => onNavigateTab('leads')}
-              className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+              className={`text-xs font-semibold hover:underline cursor-pointer ${
+                theme === 'bordo' ? 'text-rose-800 dark:text-rose-400' : 'text-blue-600 dark:text-blue-400'
+              }`}
             >
               Ver todos os leads →
             </button>

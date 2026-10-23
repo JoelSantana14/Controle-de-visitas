@@ -18,7 +18,7 @@ import {
   Check
 } from 'lucide-react';
 import { Lead, STAGE_CONFIG, BrokerItem, ThemeMode, BorderMode } from '../types';
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 interface DashboardProps {
   leads: Lead[];
@@ -63,6 +63,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Executive Top-level KPIs
   const conversionRate = totalLeads > 0 ? ((salesCount / totalLeads) * 100).toFixed(1) : '0';
+
+  // Sales Funnel Data for Recharts
+  const funnelCountLead = totalLeads;
+  const funnelCountVisita = leads.filter(l => l.status === 'visita_plantao' || l.status === 'montagem_pasta' || l.status === 'credito_condicionado' || l.status === 'credito_aprovado' || l.status === 'venda_realizada' || l.visitDate).length;
+  const funnelCountPasta = leads.filter(l => l.status === 'montagem_pasta' || l.status === 'credito_condicionado' || l.status === 'credito_aprovado' || l.status === 'venda_realizada' || l.pastaStatus === 'completa').length;
+  const funnelCountAprovado = leads.filter(l => l.status === 'credito_aprovado' || l.status === 'venda_realizada' || l.creditStatus === 'aprovado').length;
+  const funnelCountVenda = salesCount;
+
+  const funnelData = [
+    { name: '1. Lead', count: funnelCountLead, conversion: '100%', fill: theme === 'bordo' ? '#881337' : '#2563eb' },
+    { name: '2. Visita', count: funnelCountVisita, conversion: `${funnelCountLead > 0 ? ((funnelCountVisita / funnelCountLead) * 100).toFixed(1) : 0}%`, fill: theme === 'bordo' ? '#9f1239' : '#3b82f6' },
+    { name: '3. Pasta', count: funnelCountPasta, conversion: `${funnelCountLead > 0 ? ((funnelCountPasta / funnelCountLead) * 100).toFixed(1) : 0}%`, fill: theme === 'bordo' ? '#be123c' : '#4f46e5' },
+    { name: '4. Aprovado', count: funnelCountAprovado, conversion: `${funnelCountLead > 0 ? ((funnelCountAprovado / funnelCountLead) * 100).toFixed(1) : 0}%`, fill: theme === 'bordo' ? '#e11d48' : '#7c3aed' },
+    { name: '5. Venda', count: funnelCountVenda, conversion: `${conversionRate}%`, fill: theme === 'bordo' ? '#f43f5e' : '#db2777' },
+  ];
   
   const closedLeads = leads.filter(l => l.status === 'venda_realizada');
   let totalDays = 0;
@@ -372,6 +387,77 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold">
               📂
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sales Funnel Conversion Chart (Recharts) */}
+      <div className={`bg-white dark:bg-slate-900 ${borderClass} rounded-2xl p-6 space-y-4`}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <TrendingUp className={`w-5 h-5 ${theme === 'bordo' ? 'text-rose-800' : 'text-blue-600'}`} />
+              <span>Funil de Vendas & Taxas de Conversão por Etapa</span>
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Fluxo progressivo de conversão do lead até o fechamento do contrato
+            </p>
+          </div>
+          <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg">
+            Pipeline de Conversão
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          {/* Left: Recharts Bar Chart representing Funnel */}
+          <div className="lg:col-span-8 h-[260px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={funnelData}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                <XAxis type="number" stroke="#94a3b8" fontSize={12} />
+                <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={12} width={110} />
+                <Tooltip
+                  formatter={(value: any, name: any, item: any) => [
+                    `${value} leads (${item.payload.conversion} de conversão)`,
+                    'Quantidade'
+                  ]}
+                  contentStyle={{
+                    backgroundColor: '#0f172a',
+                    border: '1px solid #334155',
+                    borderRadius: '10px',
+                    color: '#fff',
+                    fontSize: '12px'
+                  }}
+                />
+                <Bar dataKey="count" radius={[0, 8, 8, 0]}>
+                  {funnelData.map((entry, index) => (
+                    <Cell key={`cell-funnel-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Right: Funnel Stage Cards with Conversion % */}
+          <div className="lg:col-span-4 space-y-2">
+            {funnelData.map((stage, idx) => (
+              <div key={idx} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: stage.fill }} />
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{stage.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-900 dark:text-white">{stage.count} leads</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                    {stage.conversion}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

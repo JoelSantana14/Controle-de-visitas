@@ -9,6 +9,7 @@ import { AiAdvisor } from './components/AiAdvisor';
 import { TaskManager } from './components/TaskManager';
 import { LeadModal } from './components/LeadModal';
 import { INITIAL_LEADS } from './mockData';
+import { useDebouncedLocalStorage } from './hooks/useDebouncedLocalStorage';
 import { 
   Lead, 
   PipelineStage, 
@@ -31,7 +32,7 @@ export default function App() {
   // Persistent Leads
   const [leads, setLeads] = useState<Lead[]>(() => {
     const saved = localStorage.getItem('immoflow_leads');
-    if (saved) {
+    if (saved !== null) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
     return INITIAL_LEADS;
@@ -40,7 +41,7 @@ export default function App() {
   // Persistent Brokers
   const [brokers, setBrokers] = useState<BrokerItem[]>(() => {
     const saved = localStorage.getItem('immoflow_brokers');
-    if (saved) {
+    if (saved !== null) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
     return INITIAL_BROKER_ITEMS;
@@ -49,7 +50,7 @@ export default function App() {
   // Persistent Developments
   const [developments, setDevelopments] = useState<DevelopmentItem[]>(() => {
     const saved = localStorage.getItem('immoflow_developments');
-    if (saved) {
+    if (saved !== null) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
     return INITIAL_DEVELOPMENT_ITEMS;
@@ -58,7 +59,7 @@ export default function App() {
   // Persistent Origins
   const [origins, setOrigins] = useState<OriginItem[]>(() => {
     const saved = localStorage.getItem('immoflow_origins');
-    if (saved) {
+    if (saved !== null) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
     return INITIAL_ORIGIN_ITEMS;
@@ -67,7 +68,7 @@ export default function App() {
   // Persistent Teams
   const [teams, setTeams] = useState<TeamItem[]>(() => {
     const saved = localStorage.getItem('immoflow_teams');
-    if (saved) {
+    if (saved !== null) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
     return INITIAL_TEAM_ITEMS;
@@ -76,7 +77,7 @@ export default function App() {
   // Persistent Tasks
   const [tasks, setTasks] = useState<TaskItem[]>(() => {
     const saved = localStorage.getItem('immoflow_tasks');
-    if (saved) {
+    if (saved !== null) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
     return INITIAL_TASKS;
@@ -99,38 +100,35 @@ export default function App() {
   const [selectedLeadDetails, setSelectedLeadDetails] = useState<Lead | null>(null);
   const [leadToDeleteId, setLeadToDeleteId] = useState<string | null>(null);
 
-  // Sync state to localStorage
-  useEffect(() => {
-    localStorage.setItem('immoflow_leads', JSON.stringify(leads));
-  }, [leads]);
+  // Debounced automatic persistence to localStorage for high performance and data safety
+  useDebouncedLocalStorage('immoflow_leads', leads, 300);
+  useDebouncedLocalStorage('immoflow_brokers', brokers, 300);
+  useDebouncedLocalStorage('immoflow_developments', developments, 300);
+  useDebouncedLocalStorage('immoflow_origins', origins, 300);
+  useDebouncedLocalStorage('immoflow_teams', teams, 300);
+  useDebouncedLocalStorage('immoflow_tasks', tasks, 300);
+  useDebouncedLocalStorage('immoflow_theme', theme, 100);
+  useDebouncedLocalStorage('immoflow_border_mode', borderMode, 100);
 
+  // Emergency synchronous flush before unload/refresh
   useEffect(() => {
-    localStorage.setItem('immoflow_brokers', JSON.stringify(brokers));
-  }, [brokers]);
-
-  useEffect(() => {
-    localStorage.setItem('immoflow_developments', JSON.stringify(developments));
-  }, [developments]);
-
-  useEffect(() => {
-    localStorage.setItem('immoflow_origins', JSON.stringify(origins));
-  }, [origins]);
-
-  useEffect(() => {
-    localStorage.setItem('immoflow_teams', JSON.stringify(teams));
-  }, [teams]);
-
-  useEffect(() => {
-    localStorage.setItem('immoflow_tasks', JSON.stringify(tasks));
-  }, [tasks]);
-
-  useEffect(() => {
-    localStorage.setItem('immoflow_theme', theme);
-  }, [theme]);
-
-  useEffect(() => {
-    localStorage.setItem('immoflow_border_mode', borderMode);
-  }, [borderMode]);
+    const handleBeforeUnload = () => {
+      try {
+        localStorage.setItem('immoflow_leads', JSON.stringify(leads));
+        localStorage.setItem('immoflow_brokers', JSON.stringify(brokers));
+        localStorage.setItem('immoflow_developments', JSON.stringify(developments));
+        localStorage.setItem('immoflow_origins', JSON.stringify(origins));
+        localStorage.setItem('immoflow_teams', JSON.stringify(teams));
+        localStorage.setItem('immoflow_tasks', JSON.stringify(tasks));
+        localStorage.setItem('immoflow_theme', theme);
+        localStorage.setItem('immoflow_border_mode', borderMode);
+      } catch (err) {
+        console.error('Erro no salvamento emergency beforeunload:', err);
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [leads, brokers, developments, origins, teams, tasks, theme, borderMode]);
 
   // Derived simple lists for select inputs and filters
   const brokerNames = brokers.filter(b => b.active).map(b => b.name);

@@ -170,12 +170,15 @@ export const INITIAL_BROKER_ITEMS: BrokerItem[] = [
 ];
 
 export const INITIAL_DEVELOPMENT_ITEMS: DevelopmentItem[] = [
-  { id: 'd-1', name: 'Residencial Vista Verde', type: 'Apartamento', developer: 'Incorporadora Horizonte', address: 'Av. Paulista, 1200 - Jardins', unitsTotal: 120, unitsAvailable: 34, priceRange: 'R$ 380k - R$ 520k', estimatedVGV: 54000000, status: 'obras' },
-  { id: 'd-2', name: 'Torre Metrópole', type: 'Apartamento Studio / 1D', developer: 'Metrópole Urbanismo', address: 'Rua Bela Cintra, 850 - Consolação', unitsTotal: 180, unitsAvailable: 45, priceRange: 'R$ 450k - R$ 750k', estimatedVGV: 98000000, status: 'lancamento' },
+  { id: 'd-1', name: 'Residencial Vista Verde', type: 'Apartamento Padrão', developer: 'Incorporadora Horizonte', address: 'Av. Paulista, 1200 - Jardins', unitsTotal: 120, unitsAvailable: 34, priceRange: 'R$ 380k - R$ 520k', estimatedVGV: 54000000, status: 'obras' },
+  { id: 'd-2', name: 'Studio Urban Pinheiros', type: 'Stúdio', developer: 'Metrópole Urbanismo', address: 'Rua Bela Cintra, 850 - Consolação', unitsTotal: 180, unitsAvailable: 45, priceRange: 'R$ 350k - R$ 550k', estimatedVGV: 78000000, status: 'lancamento' },
   { id: 'd-3', name: 'Condomínio Horizon', type: 'Casa em Condomínio', developer: 'Viva Bem Construtora', address: 'Rod. dos Bandeirantes, Km 32', unitsTotal: 65, unitsAvailable: 12, priceRange: 'R$ 850k - R$ 1.4M', estimatedVGV: 68000000, status: 'pronto' },
-  { id: 'd-4', name: 'Residencial Jardins do Sul', type: 'Apartamento Familiar', developer: 'Sul Engenharia', address: 'Rua Vergueiro, 3400 - Chácara Klabin', unitsTotal: 96, unitsAvailable: 28, priceRange: 'R$ 340k - R$ 490k', estimatedVGV: 39000000, status: 'obras' },
-  { id: 'd-5', name: 'Edifício Grand Palais', type: 'Alto Padrão / Coberturas', developer: 'Palais Empreendimentos', address: 'Al. Gabriel Monteiro da Silva, 450', unitsTotal: 40, unitsAvailable: 8, priceRange: 'R$ 1.2M - R$ 3.5M', estimatedVGV: 82000000, status: 'pronto' },
-  { id: 'd-6', name: 'Vila Bella Park', type: 'Sobrados & Vilas', developer: 'Bella Empreendimentos', address: 'Estrada do Campo Limpo, 1500', unitsTotal: 84, unitsAvailable: 19, priceRange: 'R$ 550k - R$ 780k', estimatedVGV: 56000000, status: 'lancamento' },
+  { id: 'd-4', name: 'Edifício Grand Palais', type: 'Cobertura', developer: 'Palais Empreendimentos', address: 'Al. Gabriel Monteiro da Silva, 450', unitsTotal: 40, unitsAvailable: 8, priceRange: 'R$ 1.8M - R$ 4.5M', estimatedVGV: 92000000, status: 'pronto' },
+  { id: 'd-5', name: 'Duplex Skyline Jardins', type: 'Apartamento Duplex', developer: 'Sul Engenharia', address: 'Rua Oscar Freire, 900', unitsTotal: 30, unitsAvailable: 6, priceRange: 'R$ 1.2M - R$ 2.4M', estimatedVGV: 60000000, status: 'obras' },
+  { id: 'd-6', name: 'Loteamento Fazenda Real', type: 'Terreno em Condomínio', developer: 'Terra Nova Loteamentos', address: 'Rodovia Castelo Branco, Km 68', unitsTotal: 150, unitsAvailable: 42, priceRange: 'R$ 220k - R$ 480k', estimatedVGV: 45000000, status: 'lancamento' },
+  { id: 'd-7', name: 'Chácara Recanto das Flores', type: 'Chácara em Condomínio', developer: 'Interior Life', address: 'Estância de Itu, SP', unitsTotal: 25, unitsAvailable: 5, priceRange: 'R$ 650k - R$ 1.1M', estimatedVGV: 25000000, status: 'pronto' },
+  { id: 'd-8', name: 'Centro Logístico Anhanguera', type: 'Galpão', developer: 'Industrial Parks', address: 'Rod. Anhanguera, Km 40', unitsTotal: 20, unitsAvailable: 4, priceRange: 'R$ 2.5M - R$ 6.0M', estimatedVGV: 80000000, status: 'pronto' },
+  { id: 'd-9', name: 'Business Center Paulista', type: 'Salão Comercial', developer: 'Comercial Properties', address: 'Av. Paulista, 2000', unitsTotal: 60, unitsAvailable: 15, priceRange: 'R$ 450k - R$ 900k', estimatedVGV: 40000000, status: 'obras' },
 ];
 
 export const INITIAL_ORIGIN_ITEMS: OriginItem[] = [

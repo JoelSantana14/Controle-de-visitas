@@ -673,11 +673,24 @@ export const BrokersPropertiesView: React.FC<BrokersPropertiesViewProps> = ({
                     onChange={(e) => setDevForm({ ...devForm, type: e.target.value })}
                     className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
                   >
-                    <option value="Apartamento">Apartamento</option>
+                    <option value="Stúdio">Stúdio</option>
+                    <option value="Cobertura">Cobertura</option>
+                    <option value="Apartamento Duplex">Apartamento Duplex</option>
+                    <option value="Apartamento Triplex">Apartamento Triplex</option>
+                    <option value="Kitnet">Kitnet</option>
+                    <option value="Loft">Loft</option>
+                    <option value="Apartamento Padrão">Apartamento Padrão</option>
+                    <option value="Casa">Casa</option>
+                    <option value="Sobrado">Sobrado</option>
                     <option value="Casa em Condomínio">Casa em Condomínio</option>
-                    <option value="Loteamento / Terreno">Loteamento / Terreno</option>
-                    <option value="Comercial / Salas">Comercial / Salas</option>
-                    <option value="Studio / Compacto">Studio / Compacto</option>
+                    <option value="Terreno em Condomínio">Terreno em Condomínio</option>
+                    <option value="Chácara">Chácara</option>
+                    <option value="Chácara em Condomínio">Chácara em Condomínio</option>
+                    <option value="Sítio">Sítio</option>
+                    <option value="Fazenda">Fazenda</option>
+                    <option value="Galpão">Galpão</option>
+                    <option value="Salão Comercial">Salão Comercial</option>
+                    <option value="Outros">Outros</option>
                   </select>
                 </div>
                 <div>

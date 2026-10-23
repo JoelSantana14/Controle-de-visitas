@@ -162,6 +162,21 @@ export default function App() {
         commissionRate: leadData.commissionRate || 5,
         visitDate: leadData.visitDate || '',
         notes: leadData.notes || '',
+        pastaStatus: leadData.pastaStatus || 'incompleta',
+        creditStatus: leadData.creditStatus || 'em_atendimento',
+        rejectionReason: leadData.rejectionReason,
+        rejectionDetails: leadData.rejectionDetails,
+        nextAction: leadData.nextAction,
+        attendanceRecords: leadData.attendanceRecords || [
+          {
+            id: `att-${Date.now()}`,
+            date: new Date().toLocaleString('pt-BR'),
+            contactType: 'whatsapp',
+            summary: 'Lead cadastrado no sistema.',
+            nextAction: leadData.nextAction || 'Fazer primeiro contato',
+            userName: leadData.brokerName || defaultBroker
+          }
+        ],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         documents: leadData.documents || [

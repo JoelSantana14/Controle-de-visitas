@@ -49,6 +49,18 @@ export interface TeamItem {
   description: string;
 }
 
+export type ContactType = 'ligacao' | 'whatsapp' | 'email' | 'presencial';
+export type RejectionReason = 'bacen' | 'comprometimento_renda' | 'spc_serasa' | 'conres' | 'scr' | 'outros';
+
+export interface AttendanceRecord {
+  id: string;
+  date: string;
+  contactType: ContactType;
+  summary: string;
+  nextAction?: string;
+  userName: string;
+}
+
 export interface DocumentItem {
   id: string;
   name: string;
@@ -76,6 +88,12 @@ export interface Lead {
   commissionRate: number; // e.g. 5%
   visitDate?: string;
   notes: string;
+  pastaStatus?: 'completa' | 'incompleta' | 'em_atendimento' | 'visita';
+  creditStatus?: 'em_atendimento' | 'visita' | 'aprovado' | 'condicionado' | 'reprovado';
+  rejectionReason?: RejectionReason;
+  rejectionDetails?: string;
+  nextAction?: string;
+  attendanceRecords: AttendanceRecord[];
   createdAt: string;
   updatedAt: string;
   documents: DocumentItem[];

@@ -446,6 +446,85 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       </div>
 
+      {/* Pastas & Motivos de Reprovação / Condicionamento (BACEN, Comprometimento de Renda, SPC e Serasa, CONRES, SCR, Outros) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Pastas Status Overview */}
+        <div className={`bg-white dark:bg-slate-900 ${borderClass} rounded-2xl p-6 space-y-4`}>
+          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <FolderOpen className={`w-5 h-5 ${theme === 'bordo' ? 'text-rose-800' : 'text-blue-600'}`} />
+              <span>Controle e Quantidade de Pastas</span>
+            </h3>
+            <span className="text-xs font-semibold px-2.5 py-1 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 rounded-lg">
+              Documentação
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-center">
+              <p className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">Completas</p>
+              <p className="text-xl font-extrabold text-emerald-900 dark:text-emerald-100 mt-1">
+                {leads.filter(l => l.pastaStatus === 'completa').length}
+              </p>
+            </div>
+            <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-center">
+              <p className="text-xs text-amber-700 dark:text-amber-300 font-medium">Incompletas</p>
+              <p className="text-xl font-extrabold text-amber-900 dark:text-amber-100 mt-1">
+                {leads.filter(l => l.pastaStatus === 'incompleta' || !l.pastaStatus).length}
+              </p>
+            </div>
+            <div className="p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-xl text-center">
+              <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Em Atendimento</p>
+              <p className="text-xl font-extrabold text-blue-900 dark:text-blue-100 mt-1">
+                {leads.filter(l => l.pastaStatus === 'em_atendimento' || l.creditStatus === 'em_atendimento').length}
+              </p>
+            </div>
+            <div className="p-3.5 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 rounded-xl text-center">
+              <p className="text-xs text-indigo-700 dark:text-indigo-300 font-medium">Visita</p>
+              <p className="text-xl font-extrabold text-indigo-900 dark:text-indigo-100 mt-1">
+                {leads.filter(l => l.pastaStatus === 'visita' || l.creditStatus === 'visita' || l.status === 'visita_plantao').length}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Rejection / Condition Reasons Breakdown */}
+        <div className={`bg-white dark:bg-slate-900 ${borderClass} rounded-2xl p-6 space-y-4`}>
+          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-rose-600" />
+              <span>Motivos de Reprovação / Condicionamento</span>
+            </h3>
+            <span className="text-xs font-semibold px-2.5 py-1 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 rounded-lg">
+              Laudos Bancários
+            </span>
+          </div>
+
+          <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
+            {[
+              { key: 'bacen', label: 'BACEN (Sistema Bancário)' },
+              { key: 'comprometimento_renda', label: 'Comprometimento de Renda (>30%)' },
+              { key: 'spc_serasa', label: 'SPC e Serasa (Apontamento)' },
+              { key: 'conres', label: 'CONRES (Restritivo)' },
+              { key: 'scr', label: 'SCR (Informações de Crédito)' },
+              { key: 'outros', label: 'Outros Motivos' },
+            ].map(item => {
+              const count = leads.filter(l => l.rejectionReason === item.key).length;
+              return (
+                <div key={item.key} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 rounded-xl text-xs">
+                  <span className="font-medium text-slate-800 dark:text-slate-200">{item.label}</span>
+                  <span className="font-bold px-2 py-0.5 bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 rounded-full">
+                    {count} {count === 1 ? 'caso' : 'casos'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+      </div>
+
       {/* Monthly Sales Goals per Broker & Recent Leads */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         

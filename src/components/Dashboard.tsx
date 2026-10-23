@@ -48,16 +48,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const [editingBroker, setEditingBroker] = useState<string | null>(null);
   const [tempGoal, setTempGoal] = useState<number>(1200000);
+  const [selectedBrokerFilter, setSelectedBrokerFilter] = useState<string>('todos');
 
-  const totalLeads = leads.length;
-  const visitsCount = leads.filter(l => l.status === 'visita_plantao' || l.visitDate).length;
-  const foldersCount = leads.filter(l => l.status === 'montagem_pasta').length;
-  const approvedCount = leads.filter(l => l.status === 'credito_aprovado').length;
-  const conditionedCount = leads.filter(l => l.status === 'credito_condicionado').length;
-  const rejectedCount = leads.filter(l => l.status === 'credito_reprovado').length;
-  const salesCount = leads.filter(l => l.status === 'venda_realizada').length;
+  const activeLeads = selectedBrokerFilter === 'todos'
+    ? leads
+    : leads.filter(l => l.brokerName === selectedBrokerFilter);
 
-  const totalVGV = leads
+  const totalLeads = activeLeads.length;
+  const visitsCount = activeLeads.filter(l => l.status === 'visita_plantao' || l.visitDate).length;
+  const foldersCount = activeLeads.filter(l => l.status === 'montagem_pasta').length;
+  const approvedCount = activeLeads.filter(l => l.status === 'credito_aprovado').length;
+  const conditionedCount = activeLeads.filter(l => l.status === 'credito_condicionado').length;
+  const rejectedCount = activeLeads.filter(l => l.status === 'credito_reprovado').length;
+  const salesCount = activeLeads.filter(l => l.status === 'venda_realizada').length;
+
+  const totalVGV = activeLeads
     .filter(l => l.status === 'venda_realizada')
     .reduce((acc, curr) => acc + (curr.propertyValue || 0), 0);
 
@@ -66,9 +71,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Sales Funnel Data for Recharts
   const funnelCountLead = totalLeads;
-  const funnelCountVisita = leads.filter(l => l.status === 'visita_plantao' || l.status === 'montagem_pasta' || l.status === 'credito_condicionado' || l.status === 'credito_aprovado' || l.status === 'venda_realizada' || l.visitDate).length;
-  const funnelCountPasta = leads.filter(l => l.status === 'montagem_pasta' || l.status === 'credito_condicionado' || l.status === 'credito_aprovado' || l.status === 'venda_realizada' || l.pastaStatus === 'completa').length;
-  const funnelCountAprovado = leads.filter(l => l.status === 'credito_aprovado' || l.status === 'venda_realizada' || l.creditStatus === 'aprovado').length;
+  const funnelCountVisita = activeLeads.filter(l => l.status === 'visita_plantao' || l.status === 'montagem_pasta' || l.status === 'credito_condicionado' || l.status === 'credito_aprovado' || l.status === 'venda_realizada' || l.visitDate).length;
+  const funnelCountPasta = activeLeads.filter(l => l.status === 'montagem_pasta' || l.status === 'credito_condicionado' || l.status === 'credito_aprovado' || l.status === 'venda_realizada' || l.pastaStatus === 'completa').length;
+  const funnelCountAprovado = activeLeads.filter(l => l.status === 'credito_aprovado' || l.status === 'venda_realizada' || l.creditStatus === 'aprovado').length;
   const funnelCountVenda = salesCount;
 
   const funnelData = [
@@ -79,7 +84,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     { name: '5. Venda', count: funnelCountVenda, conversion: `${conversionRate}%`, fill: theme === 'bordo' ? '#f43f5e' : '#db2777' },
   ];
   
-  const closedLeads = leads.filter(l => l.status === 'venda_realizada');
+  const closedLeads = activeLeads.filter(l => l.status === 'venda_realizada');
   let totalDays = 0;
   closedLeads.forEach(l => {
     const created = new Date(l.createdAt).getTime();
@@ -91,7 +96,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   let activeDocsCount = 0;
   let pendingDocsCount = 0;
-  leads.forEach(l => {
+  activeLeads.forEach(l => {
     (l.documents || []).forEach(doc => {
       if (doc.status === 'aprovado' || doc.status === 'enviado') {
         activeDocsCount++;
@@ -103,14 +108,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Today visits calculation
   const todayStr = new Date().toISOString().slice(0, 10);
-  const todayVisits = leads.filter(l => {
+  const todayVisits = activeLeads.filter(l => {
     if (!l.visitDate) return false;
     return l.visitDate.startsWith(todayStr);
   });
 
   // Origins stats for Recharts
   const originStats: Record<string, number> = {};
-  leads.forEach(l => {
+  activeLeads.forEach(l => {
     originStats[l.origin] = (originStats[l.origin] || 0) + 1;
   });
 
@@ -218,6 +223,40 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
       )}
+
+      {/* Broker Filter Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center gap-2">
+          <Users className={`w-5 h-5 ${theme === 'bordo' ? 'text-rose-800' : 'text-blue-600'}`} />
+          <div>
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">Filtrar Desempenho e Leads por Corretor</h2>
+            <p className="text-xs text-slate-500">
+              {selectedBrokerFilter === 'todos' ? 'Exibindo dados consolidados de todos os corretores' : `Filtrando por: ${selectedBrokerFilter}`}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <select
+            value={selectedBrokerFilter}
+            onChange={(e) => setSelectedBrokerFilter(e.target.value)}
+            className="px-3.5 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-800 cursor-pointer"
+          >
+            <option value="todos">👥 Todos os Corretores (Geral)</option>
+            {brokers.map(b => (
+              <option key={b.id} value={b.name}>👤 {b.name} ({b.team})</option>
+            ))}
+          </select>
+          {selectedBrokerFilter !== 'todos' && (
+            <button
+              onClick={() => setSelectedBrokerFilter('todos')}
+              className="px-3 py-2 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 rounded-xl transition-colors cursor-pointer"
+            >
+              Limpar Filtro
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Top Banner / Welcome */}
       <div className={`rounded-2xl p-6 sm:p-8 text-white ${bannerClass}`}>

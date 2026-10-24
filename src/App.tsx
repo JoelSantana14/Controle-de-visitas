@@ -11,6 +11,7 @@ import { LeadModal } from './components/LeadModal';
 import { INITIAL_LEADS } from './mockData';
 import { useDebouncedLocalStorage } from './hooks/useDebouncedLocalStorage';
 import { storageService } from './services/storageService';
+import { firestoreService, seedInitialDataIfNeeded } from './services/firestoreService';
 import { 
   Lead, 
   PipelineStage, 
@@ -84,6 +85,39 @@ export default function App() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [leads, brokers, developments, origins, teams, tasks, theme, borderMode]);
 
+  // Real-time Firestore sync & seeding on mount
+  useEffect(() => {
+    seedInitialDataIfNeeded().then(() => {
+      const unsubLeads = firestoreService.subscribeLeads((data) => {
+        if (data && data.length > 0) setLeads(data);
+      });
+      const unsubBrokers = firestoreService.subscribeBrokers((data) => {
+        if (data && data.length > 0) setBrokers(data);
+      });
+      const unsubDevs = firestoreService.subscribeDevelopments((data) => {
+        if (data && data.length > 0) setDevelopments(data);
+      });
+      const unsubOrigins = firestoreService.subscribeOrigins((data) => {
+        if (data && data.length > 0) setOrigins(data);
+      });
+      const unsubTeams = firestoreService.subscribeTeams((data) => {
+        if (data && data.length > 0) setTeams(data);
+      });
+      const unsubTasks = firestoreService.subscribeTasks((data) => {
+        if (data) setTasks(data);
+      });
+
+      return () => {
+        unsubLeads();
+        unsubBrokers();
+        unsubDevs();
+        unsubOrigins();
+        unsubTeams();
+        unsubTasks();
+      };
+    });
+  }, []);
+
   // Derived simple lists for select inputs and filters
   const brokerNames = brokers.filter(b => b.active).map(b => b.name);
   const devNames = developments.map(d => d.name);
@@ -111,10 +145,12 @@ export default function App() {
               }
             ]
           };
+          firestoreService.saveLead(updated);
           return updated;
         }
         return l;
       }));
+      showToast('☁️ Lead atualizado no Firestore!');
     } else {
       const newLead: Lead = {
         id: `lead-${Date.now()}`,
@@ -161,7 +197,9 @@ export default function App() {
           }
         ]
       };
+      firestoreService.saveLead(newLead);
       setLeads(prev => [newLead, ...prev]);
+      showToast('☁️ Novo lead salvo no Firestore!');
     }
     setLeadToEdit(null);
   };
@@ -169,7 +207,7 @@ export default function App() {
   const handleUpdateStatus = (leadId: string, newStatus: PipelineStage) => {
     setLeads(prev => prev.map(l => {
       if (l.id === leadId) {
-        return {
+        const upLead: Lead = {
           ...l,
           status: newStatus,
           updatedAt: new Date().toISOString(),
@@ -183,15 +221,20 @@ export default function App() {
             }
           ]
         };
+        firestoreService.saveLead(upLead);
+        return upLead;
       }
       return l;
     }));
+    showToast('☁️ Status sincronizado em nuvem!');
   };
 
   const confirmDeleteLead = () => {
     if (leadToDeleteId) {
+      firestoreService.deleteLead(leadToDeleteId);
       setLeads(prev => prev.filter(l => l.id !== leadToDeleteId));
       setLeadToDeleteId(null);
+      showToast('🗑️ Lead removido do Firestore.');
     }
   };
 
@@ -284,13 +327,33 @@ export default function App() {
         {activeTab === 'settings' && (
           <BrokersPropertiesView 
             brokers={brokers}
-            setBrokers={setBrokers}
+            setBrokers={(action) => {
+              const next = typeof action === 'function' ? action(brokers) : action;
+              setBrokers(next);
+              next.forEach(b => firestoreService.saveBroker(b));
+              showToast('☁️ Corretores atualizados no Firestore!');
+            }}
             developments={developments}
-            setDevelopments={setDevelopments}
+            setDevelopments={(action) => {
+              const next = typeof action === 'function' ? action(developments) : action;
+              setDevelopments(next);
+              next.forEach(d => firestoreService.saveDevelopment(d));
+              showToast('☁️ Empreendimentos atualizados no Firestore!');
+            }}
             origins={origins}
-            setOrigins={setOrigins}
+            setOrigins={(action) => {
+              const next = typeof action === 'function' ? action(origins) : action;
+              setOrigins(next);
+              next.forEach(o => firestoreService.saveOrigin(o));
+              showToast('☁️ Canais de origem atualizados!');
+            }}
             teams={teams}
-            setTeams={setTeams}
+            setTeams={(action) => {
+              const next = typeof action === 'function' ? action(teams) : action;
+              setTeams(next);
+              next.forEach(t => firestoreService.saveTeam(t));
+              showToast('☁️ Equipes atualizadas em nuvem!');
+            }}
             theme={theme}
             borderMode={borderMode}
           />
@@ -299,7 +362,12 @@ export default function App() {
         {activeTab === 'tasks' && (
           <TaskManager 
             tasks={tasks}
-            setTasks={setTasks}
+            setTasks={(action) => {
+              const next = typeof action === 'function' ? action(tasks) : action;
+              setTasks(next);
+              next.forEach(t => firestoreService.saveTask(t));
+              showToast('☁️ Tarefas sincronizadas com o Firestore!');
+            }}
             availableBrokers={brokerNames}
             theme={theme}
             borderMode={borderMode}

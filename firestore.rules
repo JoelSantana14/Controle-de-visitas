@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidLead(data) {
+      return data.keys().hasAll(['id', 'clientName', 'clientPhone', 'brokerName', 'development', 'status']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.clientName is string && data.clientName.size() <= 150 &&
+             data.clientPhone is string && data.clientPhone.size() <= 50 &&
+             data.brokerName is string && data.brokerName.size() <= 100 &&
+             data.development is string && data.development.size() <= 150 &&
+             data.status is string;
+    }
+
+    function isValidBroker(data) {
+      return data.keys().hasAll(['id', 'name']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 150;
+    }
+
+    function isValidDevelopment(data) {
+      return data.keys().hasAll(['id', 'name']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 150;
+    }
+
+    function isValidOrigin(data) {
+      return data.keys().hasAll(['id', 'name']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 100;
+    }
+
+    function isValidTeam(data) {
+      return data.keys().hasAll(['id', 'name']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() <= 100;
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['id', 'title']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() <= 150;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /leads/{leadId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(leadId) && isValidLead(request.resource.data);
+      allow update: if isSignedIn() && isValidId(leadId) && isValidLead(request.resource.data);
+      allow delete: if isSignedIn() && isValidId(leadId);
+    }
+
+    match /brokers/{brokerId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(brokerId) && isValidBroker(request.resource.data);
+      allow update: if isSignedIn() && isValidId(brokerId) && isValidBroker(request.resource.data);
+      allow delete: if isSignedIn() && isValidId(brokerId);
+    }
+
+    match /developments/{devId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(devId) && isValidDevelopment(request.resource.data);
+      allow update: if isSignedIn() && isValidId(devId) && isValidDevelopment(request.resource.data);
+      allow delete: if isSignedIn() && isValidId(devId);
+    }
+
+    match /origins/{originId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(originId) && isValidOrigin(request.resource.data);
+      allow update: if isSignedIn() && isValidId(originId) && isValidOrigin(request.resource.data);
+      allow delete: if isSignedIn() && isValidId(originId);
+    }
+
+    match /teams/{teamId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(teamId) && isValidTeam(request.resource.data);
+      allow update: if isSignedIn() && isValidId(teamId) && isValidTeam(request.resource.data);
+      allow delete: if isSignedIn() && isValidId(teamId);
+    }
+
+    match /tasks/{taskId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(taskId) && isValidTask(request.resource.data);
+      allow update: if isSignedIn() && isValidId(taskId) && isValidTask(request.resource.data);
+      allow delete: if isSignedIn() && isValidId(taskId);
+    }
+  }
+}

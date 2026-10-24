@@ -21,7 +21,7 @@ interface NavbarProps {
   setActiveTab: (tab: string) => void;
   onOpenNewLeadModal: () => void;
   onExportData: () => void;
-  onImportData: () => void;
+  onImportData: (jsonString: string) => void;
   theme: ThemeMode;
   setTheme: (theme: ThemeMode) => void;
   borderMode: BorderMode;
@@ -33,6 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   onOpenNewLeadModal,
   onExportData,
+  onImportData,
   theme,
   setTheme,
   borderMode,
@@ -214,12 +215,39 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               onClick={onExportData}
-              title="Exportar Dados (JSON)"
+              title="Exportar Backup (JSON)"
               className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors hidden sm:flex items-center gap-1 text-xs font-medium border border-slate-200 dark:border-slate-700 cursor-pointer"
             >
               <Download className="w-4 h-4" />
               <span>Exportar</span>
             </button>
+
+            <label
+              title="Importar Backup (JSON)"
+              className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors hidden sm:flex items-center gap-1 text-xs font-medium border border-slate-200 dark:border-slate-700 cursor-pointer"
+            >
+              <Download className="w-4 h-4 rotate-180" />
+              <span>Importar</span>
+              <input
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const content = event.target?.result as string;
+                      if (content) {
+                        onImportData(content);
+                      }
+                    };
+                    reader.readAsText(file);
+                  }
+                  e.target.value = '';
+                }}
+              />
+            </label>
 
             <button
               onClick={onOpenNewLeadModal}

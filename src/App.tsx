@@ -10,6 +10,7 @@ import { TaskManager } from './components/TaskManager';
 import { LeadModal } from './components/LeadModal';
 import { INITIAL_LEADS } from './mockData';
 import { useDebouncedLocalStorage } from './hooks/useDebouncedLocalStorage';
+import { storageService } from './services/storageService';
 import { 
   Lead, 
   PipelineStage, 
@@ -29,70 +30,23 @@ import {
 import { X, Phone, Mail, Building, DollarSign, AlertTriangle } from 'lucide-react';
 
 export default function App() {
-  // Persistent Leads
-  const [leads, setLeads] = useState<Lead[]>(() => {
-    const saved = localStorage.getItem('immoflow_leads');
-    if (saved !== null) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return INITIAL_LEADS;
-  });
+  const [leads, setLeads] = useState<Lead[]>(() => storageService.getLeads());
+  const [brokers, setBrokers] = useState<BrokerItem[]>(() => storageService.getBrokers());
+  const [developments, setDevelopments] = useState<DevelopmentItem[]>(() => storageService.getDevelopments());
+  const [origins, setOrigins] = useState<OriginItem[]>(() => storageService.getOrigins());
+  const [teams, setTeams] = useState<TeamItem[]>(() => storageService.getTeams());
+  const [tasks, setTasks] = useState<TaskItem[]>(() => storageService.getTasks());
+  const [theme, setTheme] = useState<ThemeMode>(() => storageService.getTheme());
+  const [borderMode, setBorderMode] = useState<BorderMode>(() => storageService.getBorderMode());
 
-  // Persistent Brokers
-  const [brokers, setBrokers] = useState<BrokerItem[]>(() => {
-    const saved = localStorage.getItem('immoflow_brokers');
-    if (saved !== null) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return INITIAL_BROKER_ITEMS;
-  });
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Persistent Developments
-  const [developments, setDevelopments] = useState<DevelopmentItem[]>(() => {
-    const saved = localStorage.getItem('immoflow_developments');
-    if (saved !== null) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return INITIAL_DEVELOPMENT_ITEMS;
-  });
-
-  // Persistent Origins
-  const [origins, setOrigins] = useState<OriginItem[]>(() => {
-    const saved = localStorage.getItem('immoflow_origins');
-    if (saved !== null) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return INITIAL_ORIGIN_ITEMS;
-  });
-
-  // Persistent Teams
-  const [teams, setTeams] = useState<TeamItem[]>(() => {
-    const saved = localStorage.getItem('immoflow_teams');
-    if (saved !== null) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return INITIAL_TEAM_ITEMS;
-  });
-
-  // Persistent Tasks
-  const [tasks, setTasks] = useState<TaskItem[]>(() => {
-    const saved = localStorage.getItem('immoflow_tasks');
-    if (saved !== null) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return INITIAL_TASKS;
-  });
-
-  // Theme & Border Mode (Default: Bordô Nobre & Bordas Destacadas)
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem('immoflow_theme');
-    return (saved as ThemeMode) || 'bordo';
-  });
-
-  const [borderMode, setBorderMode] = useState<BorderMode>(() => {
-    const saved = localStorage.getItem('immoflow_border_mode');
-    return (saved as BorderMode) || 'destacada';
-  });
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3500);
+  };
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -242,21 +196,32 @@ export default function App() {
   };
 
   const handleExportData = () => {
-    const fullBackup = {
-      leads,
-      brokers,
-      developments,
-      origins,
-      teams,
-      exportDate: new Date().toISOString()
-    };
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullBackup, null, 2));
+    const jsonStr = storageService.exportBackupJson();
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonStr);
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
     downloadAnchor.setAttribute("download", `immoflow_backup_${new Date().toISOString().slice(0, 10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+    showToast('💾 Backup exportado com sucesso!');
+  };
+
+  const handleImportData = (jsonString: string) => {
+    const success = storageService.importBackupJson(jsonString);
+    if (success) {
+      setLeads(storageService.getLeads());
+      setBrokers(storageService.getBrokers());
+      setDevelopments(storageService.getDevelopments());
+      setOrigins(storageService.getOrigins());
+      setTeams(storageService.getTeams());
+      setTasks(storageService.getTasks());
+      setTheme(storageService.getTheme());
+      setBorderMode(storageService.getBorderMode());
+      showToast('📥 Backup importado com sucesso!');
+    } else {
+      showToast('❌ Erro ao importar backup. Verifique o arquivo JSON.');
+    }
   };
 
   return (
@@ -268,7 +233,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         onOpenNewLeadModal={() => { setLeadToEdit(null); setIsModalOpen(true); }}
         onExportData={handleExportData}
-        onImportData={() => {}}
+        onImportData={handleImportData}
         theme={theme}
         setTheme={setTheme}
         borderMode={borderMode}
@@ -493,6 +458,13 @@ export default function App() {
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 text-xs font-semibold animate-in fade-in slide-in-from-bottom-5 duration-300 flex items-center gap-2">
+          <span>{toastMessage}</span>
         </div>
       )}
 

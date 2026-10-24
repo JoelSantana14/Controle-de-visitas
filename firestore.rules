@@ -6,10 +6,6 @@ service cloud.firestore {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
     function isValidLead(data) {
       return data.keys().hasAll(['id', 'clientName', 'clientPhone', 'brokerName', 'development', 'status']) &&
              data.id is string && data.id.size() <= 128 &&
@@ -55,45 +51,39 @@ service cloud.firestore {
     }
 
     match /leads/{leadId} {
-      allow read, list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(leadId) && isValidLead(request.resource.data);
-      allow update: if isSignedIn() && isValidId(leadId) && isValidLead(request.resource.data);
-      allow delete: if isSignedIn() && isValidId(leadId);
+      allow read, list: if true;
+      allow create, update: if isValidId(leadId) && isValidLead(request.resource.data);
+      allow delete: if isValidId(leadId);
     }
 
     match /brokers/{brokerId} {
-      allow read, list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(brokerId) && isValidBroker(request.resource.data);
-      allow update: if isSignedIn() && isValidId(brokerId) && isValidBroker(request.resource.data);
-      allow delete: if isSignedIn() && isValidId(brokerId);
+      allow read, list: if true;
+      allow create, update: if isValidId(brokerId) && isValidBroker(request.resource.data);
+      allow delete: if isValidId(brokerId);
     }
 
     match /developments/{devId} {
-      allow read, list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(devId) && isValidDevelopment(request.resource.data);
-      allow update: if isSignedIn() && isValidId(devId) && isValidDevelopment(request.resource.data);
-      allow delete: if isSignedIn() && isValidId(devId);
+      allow read, list: if true;
+      allow create, update: if isValidId(devId) && isValidDevelopment(request.resource.data);
+      allow delete: if isValidId(devId);
     }
 
     match /origins/{originId} {
-      allow read, list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(originId) && isValidOrigin(request.resource.data);
-      allow update: if isSignedIn() && isValidId(originId) && isValidOrigin(request.resource.data);
-      allow delete: if isSignedIn() && isValidId(originId);
+      allow read, list: if true;
+      allow create, update: if isValidId(originId) && isValidOrigin(request.resource.data);
+      allow delete: if isValidId(originId);
     }
 
     match /teams/{teamId} {
-      allow read, list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(teamId) && isValidTeam(request.resource.data);
-      allow update: if isSignedIn() && isValidId(teamId) && isValidTeam(request.resource.data);
-      allow delete: if isSignedIn() && isValidId(teamId);
+      allow read, list: if true;
+      allow create, update: if isValidId(teamId) && isValidTeam(request.resource.data);
+      allow delete: if isValidId(teamId);
     }
 
     match /tasks/{taskId} {
-      allow read, list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(taskId) && isValidTask(request.resource.data);
-      allow update: if isSignedIn() && isValidId(taskId) && isValidTask(request.resource.data);
-      allow delete: if isSignedIn() && isValidId(taskId);
+      allow read, list: if true;
+      allow create, update: if isValidId(taskId) && isValidTask(request.resource.data);
+      allow delete: if isValidId(taskId);
     }
   }
 }

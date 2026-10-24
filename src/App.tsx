@@ -87,35 +87,42 @@ export default function App() {
 
   // Real-time Firestore sync & seeding on mount
   useEffect(() => {
-    seedInitialDataIfNeeded().then(() => {
-      const unsubLeads = firestoreService.subscribeLeads((data) => {
-        if (data && data.length > 0) setLeads(data);
-      });
-      const unsubBrokers = firestoreService.subscribeBrokers((data) => {
-        if (data && data.length > 0) setBrokers(data);
-      });
-      const unsubDevs = firestoreService.subscribeDevelopments((data) => {
-        if (data && data.length > 0) setDevelopments(data);
-      });
-      const unsubOrigins = firestoreService.subscribeOrigins((data) => {
-        if (data && data.length > 0) setOrigins(data);
-      });
-      const unsubTeams = firestoreService.subscribeTeams((data) => {
-        if (data && data.length > 0) setTeams(data);
-      });
-      const unsubTasks = firestoreService.subscribeTasks((data) => {
-        if (data) setTasks(data);
+    let unsubs: (() => void)[] = [];
+    let isMounted = true;
+
+    seedInitialDataIfNeeded()
+      .catch((err) => console.warn('Could not seed initial data:', err))
+      .finally(() => {
+        if (!isMounted) return;
+
+        const unsubLeads = firestoreService.subscribeLeads((data) => {
+          if (data && data.length > 0) setLeads(data);
+        });
+        const unsubBrokers = firestoreService.subscribeBrokers((data) => {
+          if (data && data.length > 0) setBrokers(data);
+        });
+        const unsubDevs = firestoreService.subscribeDevelopments((data) => {
+          if (data && data.length > 0) setDevelopments(data);
+        });
+        const unsubOrigins = firestoreService.subscribeOrigins((data) => {
+          if (data && data.length > 0) setOrigins(data);
+        });
+        const unsubTeams = firestoreService.subscribeTeams((data) => {
+          if (data && data.length > 0) setTeams(data);
+        });
+        const unsubTasks = firestoreService.subscribeTasks((data) => {
+          if (data) setTasks(data);
+        });
+
+        unsubs = [unsubLeads, unsubBrokers, unsubDevs, unsubOrigins, unsubTeams, unsubTasks];
       });
 
-      return () => {
-        unsubLeads();
-        unsubBrokers();
-        unsubDevs();
-        unsubOrigins();
-        unsubTeams();
-        unsubTasks();
-      };
-    });
+    return () => {
+      isMounted = false;
+      unsubs.forEach(unsub => {
+        try { unsub(); } catch { /* ignore */ }
+      });
+    };
   }, []);
 
   // Derived simple lists for select inputs and filters

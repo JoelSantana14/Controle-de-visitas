@@ -127,8 +127,11 @@ export const firestoreService = {
       });
       callback(items);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, path);
-      if (onError) onError(error);
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch (e) {
+        if (onError) onError(e);
+      }
     });
   },
 
@@ -141,8 +144,11 @@ export const firestoreService = {
       });
       callback(items);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, path);
-      if (onError) onError(error);
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch (e) {
+        if (onError) onError(e);
+      }
     });
   },
 
@@ -155,8 +161,11 @@ export const firestoreService = {
       });
       callback(items);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, path);
-      if (onError) onError(error);
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch (e) {
+        if (onError) onError(e);
+      }
     });
   },
 
@@ -169,8 +178,11 @@ export const firestoreService = {
       });
       callback(items);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, path);
-      if (onError) onError(error);
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch (e) {
+        if (onError) onError(e);
+      }
     });
   },
 
@@ -183,8 +195,11 @@ export const firestoreService = {
       });
       callback(items);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, path);
-      if (onError) onError(error);
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch (e) {
+        if (onError) onError(e);
+      }
     });
   },
 
@@ -197,8 +212,11 @@ export const firestoreService = {
       });
       callback(items);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, path);
-      if (onError) onError(error);
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch (e) {
+        if (onError) onError(e);
+      }
     });
   },
 

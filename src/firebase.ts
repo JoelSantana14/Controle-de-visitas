@@ -1,10 +1,21 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInAnonymously } from 'firebase/auth';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
-import firebaseConfig from '../firebase-applet-config.json';
+import appletConfig from '../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
-const rawDbId = (firebaseConfig as any).firestoreDatabaseId;
+// Support both firebase-applet-config.json and Vercel/Vite environment variables
+const resolvedConfig = {
+  projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID as string) || appletConfig.projectId || 'immoflow-crm',
+  appId: (import.meta.env.VITE_FIREBASE_APP_ID as string) || appletConfig.appId,
+  apiKey: (import.meta.env.VITE_FIREBASE_API_KEY as string) || appletConfig.apiKey,
+  authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string) || appletConfig.authDomain || 'immoflow-crm.firebaseapp.com',
+  firestoreDatabaseId: (import.meta.env.VITE_FIREBASE_DATABASE_ID as string) || (appletConfig as any).firestoreDatabaseId || '(default)',
+  storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string) || appletConfig.storageBucket || 'immoflow-crm.firebasestorage.app',
+  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || appletConfig.messagingSenderId || '1091149038305',
+};
+
+const app = !getApps().length ? initializeApp(resolvedConfig) : getApp();
+const rawDbId = resolvedConfig.firestoreDatabaseId;
 export const db = (rawDbId && rawDbId !== '(default)' && !rawDbId.startsWith('ai-studio-'))
   ? getFirestore(app, rawDbId)
   : getFirestore(app);
@@ -12,7 +23,7 @@ export const db = (rawDbId && rawDbId !== '(default)' && !rawDbId.startsWith('ai
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Test connection on boot as recommended by Firebase skill
+// Safe connection test on boot
 async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'leads', 'connection-test'));
@@ -23,3 +34,4 @@ async function testConnection() {
   }
 }
 testConnection();
+

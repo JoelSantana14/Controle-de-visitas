@@ -1,12 +1,12 @@
 {
-  "projectId": "optimistic-shape-lc9s2",
-  "appId": "1:245250708106:web:09d74cd08c236b83c59373",
-  "apiKey": "AIzaSyBcGKyZCbsspM4IHIV3q4xo919Uk16TRUk",
-  "authDomain": "optimistic-shape-lc9s2.firebaseapp.com",
+  "projectId": "immoflow-crm",
+  "appId": "1:1091149038305:web:231b5458d6e2cdf4bf6da0",
+  "apiKey": "AIzaSyCTh-_I2qN0w35d2A4ZHDxKZWJWCgSfSyI",
+  "authDomain": "immoflow-crm.firebaseapp.com",
   "firestoreDatabaseId": "ai-studio-immoflowgestodel-bb4d48d6-539c-4da2-8f01-c13d51c2d57a",
-  "storageBucket": "optimistic-shape-lc9s2.firebasestorage.app",
-  "messagingSenderId": "245250708106",
+  "storageBucket": "immoflow-crm.firebasestorage.app",
+  "messagingSenderId": "1091149038305",
   "measurementId": "",
-  "oAuthClientId": "245250708106-u077dqbf7vo1thr91b57mbgjjqkvqflm.apps.googleusercontent.com",
+  "oAuthClientId": "1091149038305-0q9vbiplg5dm7mjqvv8i29to4usdnujg.apps.googleusercontent.com",
   "recaptchaSiteKey": ""
 }

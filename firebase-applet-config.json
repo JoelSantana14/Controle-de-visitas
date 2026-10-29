@@ -3,7 +3,7 @@
   "appId": "1:1091149038305:web:231b5458d6e2cdf4bf6da0",
   "apiKey": "AIzaSyCTh-_I2qN0w35d2A4ZHDxKZWJWCgSfSyI",
   "authDomain": "immoflow-crm.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-immoflowgestodel-bb4d48d6-539c-4da2-8f01-c13d51c2d57a",
+  "firestoreDatabaseId": "(default)",
   "storageBucket": "immoflow-crm.firebasestorage.app",
   "messagingSenderId": "1091149038305",
   "measurementId": "",

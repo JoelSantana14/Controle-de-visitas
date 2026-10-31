@@ -101,6 +101,25 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "title"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Application user credentials and role for access control",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "maxLength": 150 },
+        "displayName": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "enum": ["admin", "broker"] },
+        "brokerId": { "type": "string" },
+        "brokerName": { "type": "string", "maxLength": 150 },
+        "phone": { "type": "string" },
+        "creci": { "type": "string" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "mustChangePassword": { "type": "boolean" }
+      },
+      "required": ["uid", "email", "role"]
     }
   },
   "firestore": {
@@ -127,6 +146,10 @@
     "/tasks/{taskId}": {
       "schema": { "$ref": "#/entities/Task" },
       "description": "Tasks collection"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Users credentials and role collection"
     }
   }
 }

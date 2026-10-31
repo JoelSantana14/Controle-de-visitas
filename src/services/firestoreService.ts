@@ -8,7 +8,20 @@ import {
 } from 'firebase/firestore';
 import { db, auth, googleProvider } from '../firebase';
 import { signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { Lead, BrokerItem, DevelopmentItem, OriginItem, TeamItem, TaskItem } from '../types';
+import { 
+  Lead, 
+  BrokerItem, 
+  DevelopmentItem, 
+  OriginItem, 
+  TeamItem, 
+  TaskItem,
+  DistributionRule,
+  DistributionSettings,
+  DistributionLog,
+  INITIAL_DISTRIBUTION_RULES,
+  INITIAL_DISTRIBUTION_SETTINGS,
+  INITIAL_DISTRIBUTION_LOGS
+} from '../types';
 import { INITIAL_LEADS } from '../mockData';
 import { INITIAL_BROKER_ITEMS, INITIAL_DEVELOPMENT_ITEMS, INITIAL_ORIGIN_ITEMS, INITIAL_TEAM_ITEMS, INITIAL_TASKS } from '../types';
 
@@ -87,6 +100,22 @@ export async function seedInitialDataIfNeeded() {
     if (tasksSnap.empty) {
       for (const task of INITIAL_TASKS) {
         await setDoc(doc(db, 'tasks', task.id), task);
+      }
+    }
+    const rulesSnap = await getDocs(collection(db, 'distribution_rules'));
+    if (rulesSnap.empty) {
+      for (const rule of INITIAL_DISTRIBUTION_RULES) {
+        await setDoc(doc(db, 'distribution_rules', rule.id), rule);
+      }
+    }
+    const settingsSnap = await getDocs(collection(db, 'distribution_settings'));
+    if (settingsSnap.empty) {
+      await setDoc(doc(db, 'distribution_settings', 'global_settings'), INITIAL_DISTRIBUTION_SETTINGS);
+    }
+    const logsSnap = await getDocs(collection(db, 'distribution_logs'));
+    if (logsSnap.empty) {
+      for (const log of INITIAL_DISTRIBUTION_LOGS) {
+        await setDoc(doc(db, 'distribution_logs', log.id), log);
       }
     }
   } catch (error) {
@@ -320,6 +349,132 @@ export const firestoreService = {
       await deleteDoc(doc(db, 'tasks', taskId));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  },
+
+  // Users management
+  subscribeUsers(callback: (users: import('../types').AppUser[]) => void, onError?: (err: any) => void) {
+    const path = 'users';
+    return onSnapshot(collection(db, path), (snapshot) => {
+      const items: import('../types').AppUser[] = [];
+      snapshot.forEach(docSnap => {
+        items.push(docSnap.data() as import('../types').AppUser);
+      });
+      callback(items);
+    }, (error) => {
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch (e) {
+        if (onError) onError(e);
+      }
+    });
+  },
+
+  saveUser: async (user: import('../types').AppUser) => {
+    const path = `users/${user.uid}`;
+    try {
+      await setDoc(doc(db, 'users', user.uid), user, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  },
+
+  deleteUser: async (userId: string) => {
+    const path = `users/${userId}`;
+    try {
+      await deleteDoc(doc(db, 'users', userId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  },
+
+  // Distribution Rules
+  subscribeDistributionRules(callback: (rules: DistributionRule[]) => void, onError?: (err: any) => void) {
+    const path = 'distribution_rules';
+    return onSnapshot(collection(db, path), (snapshot) => {
+      const items: DistributionRule[] = [];
+      snapshot.forEach(docSnap => {
+        items.push(docSnap.data() as DistributionRule);
+      });
+      callback(items);
+    }, (error) => {
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch (e) {
+        if (onError) onError(e);
+      }
+    });
+  },
+
+  saveDistributionRule: async (rule: DistributionRule) => {
+    const path = `distribution_rules/${rule.id}`;
+    try {
+      await setDoc(doc(db, 'distribution_rules', rule.id), rule);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  },
+
+  deleteDistributionRule: async (ruleId: string) => {
+    const path = `distribution_rules/${ruleId}`;
+    try {
+      await deleteDoc(doc(db, 'distribution_rules', ruleId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  },
+
+  // Distribution Settings
+  subscribeDistributionSettings(callback: (settings: DistributionSettings) => void, onError?: (err: any) => void) {
+    const path = 'distribution_settings/global_settings';
+    return onSnapshot(doc(db, 'distribution_settings', 'global_settings'), (snapshot) => {
+      if (snapshot.exists()) {
+        callback(snapshot.data() as DistributionSettings);
+      } else {
+        callback(INITIAL_DISTRIBUTION_SETTINGS);
+      }
+    }, (error) => {
+      try {
+        handleFirestoreError(error, OperationType.GET, path);
+      } catch (e) {
+        if (onError) onError(e);
+      }
+    });
+  },
+
+  saveDistributionSettings: async (settings: DistributionSettings) => {
+    const path = 'distribution_settings/global_settings';
+    try {
+      await setDoc(doc(db, 'distribution_settings', 'global_settings'), settings);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  },
+
+  // Distribution Logs
+  subscribeDistributionLogs(callback: (logs: DistributionLog[]) => void, onError?: (err: any) => void) {
+    const path = 'distribution_logs';
+    return onSnapshot(collection(db, path), (snapshot) => {
+      const items: DistributionLog[] = [];
+      snapshot.forEach(docSnap => {
+        items.push(docSnap.data() as DistributionLog);
+      });
+      callback(items);
+    }, (error) => {
+      try {
+        handleFirestoreError(error, OperationType.LIST, path);
+      } catch (e) {
+        if (onError) onError(e);
+      }
+    });
+  },
+
+  saveDistributionLog: async (log: DistributionLog) => {
+    const path = `distribution_logs/${log.id}`;
+    try {
+      await setDoc(doc(db, 'distribution_logs', log.id), log);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
     }
   }
 };

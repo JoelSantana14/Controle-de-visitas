@@ -16,9 +16,13 @@ window.addEventListener('unhandledrejection', (e) => {
   }
 });
 
+import { AuthProvider } from './contexts/AuthContext.tsx';
+
 createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </ErrorBoundary>
 );
 

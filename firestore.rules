@@ -85,5 +85,26 @@ service cloud.firestore {
       allow create, update: if isValidId(taskId) && isValidTask(request.resource.data);
       allow delete: if isValidId(taskId);
     }
+
+    match /users/{userId} {
+      allow read, list: if true;
+      allow create, update: if isValidId(userId);
+      allow delete: if isValidId(userId);
+    }
+
+    match /distribution_rules/{ruleId} {
+      allow read, list: if true;
+      allow create, update, delete: if isValidId(ruleId);
+    }
+
+    match /distribution_settings/{settingId} {
+      allow read, list: if true;
+      allow create, update, delete: if isValidId(settingId);
+    }
+
+    match /distribution_logs/{logId} {
+      allow read, list: if true;
+      allow create, update, delete: if isValidId(logId);
+    }
   }
 }

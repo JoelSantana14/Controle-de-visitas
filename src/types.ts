@@ -10,6 +10,22 @@ export type PipelineStage =
 export type ThemeMode = 'bordo' | 'azul' | 'esmeralda' | 'dourado';
 export type BorderMode = 'destacada' | 'suave';
 
+export type UserRole = 'admin' | 'broker';
+
+export interface AppUser {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  brokerId?: string;
+  brokerName?: string;
+  phone?: string;
+  creci?: string;
+  active: boolean;
+  createdAt: string;
+  mustChangePassword?: boolean;
+}
+
 export interface BrokerItem {
   id: string;
   name: string;
@@ -19,6 +35,14 @@ export interface BrokerItem {
   email: string;
   monthlyGoal: number;
   active: boolean;
+  // Duty & Lead Distribution fields
+  isDuty?: boolean;
+  dutyShift?: 'manha' | 'tarde' | 'noite' | 'integral';
+  dutyOrder?: number;
+  leadsReceivedToday?: number;
+  maxLeadsPerDay?: number;
+  dutyStatus?: 'disponivel' | 'em_atendimento' | 'pausa' | 'offline';
+  lastAssignedAt?: string;
 }
 
 export interface DevelopmentItem {
@@ -40,6 +64,45 @@ export interface OriginItem {
   category: 'digital' | 'presencial' | 'indicacao' | 'parceria';
   description?: string;
   active: boolean;
+}
+
+export type DistributionStrategy = 'round_robin' | 'least_loaded';
+
+export interface DistributionRule {
+  id: string;
+  name: string;
+  active: boolean;
+  priority: number;
+  strategy: DistributionStrategy;
+  targetDevelopment?: string; // empty means any development
+  targetOrigin?: string; // empty means any origin
+  minValue?: number;
+  maxValue?: number;
+  eligibleBrokerIds: string[]; // empty means all duty brokers
+  description?: string;
+}
+
+export interface DistributionSettings {
+  autoDistributionEnabled: boolean;
+  defaultStrategy: DistributionStrategy;
+  notifyBrokerOnWhatsapp: boolean;
+  preventOverload: boolean; // respect maxLeadsPerDay
+  fallbackBrokerId?: string;
+}
+
+export interface DistributionLog {
+  id: string;
+  leadId: string;
+  leadName: string;
+  clientPhone: string;
+  brokerId: string;
+  brokerName: string;
+  mode: 'automatico' | 'manual';
+  ruleId?: string;
+  ruleName: string;
+  timestamp: string;
+  development?: string;
+  origin?: string;
 }
 
 export interface TeamItem {
@@ -98,6 +161,11 @@ export interface Lead {
   updatedAt: string;
   documents: DocumentItem[];
   history: HistoryItem[];
+  // Distribution fields
+  distributionStatus?: 'distribuido' | 'pendente_distribuicao';
+  distributionMode?: 'automatico' | 'manual' | 'direto';
+  distributionRuleName?: string;
+  distributedAt?: string;
 }
 
 export interface FilterOptions {
@@ -161,12 +229,107 @@ export const STAGE_CONFIG: Record<PipelineStage, { label: string; color: string;
 };
 
 export const INITIAL_BROKER_ITEMS: BrokerItem[] = [
-  { id: 'b-1', name: 'Carlos Silva', team: 'Equipe Plantão Alpha', creci: '184920-F', phone: '(11) 98765-4321', email: 'carlos.silva@imob.com', monthlyGoal: 1500000, active: true },
-  { id: 'b-2', name: 'Ana Souza', team: 'Equipe Lançamentos', creci: '192834-F', phone: '(11) 97123-8899', email: 'ana.souza@imob.com', monthlyGoal: 1200000, active: true },
-  { id: 'b-3', name: 'Roberto Mendes', team: 'Equipe Alto Padrão', creci: '164729-F', phone: '(11) 94433-2211', email: 'roberto.m@imob.com', monthlyGoal: 2000000, active: true },
-  { id: 'b-4', name: 'Juliana Castro', team: 'Equipe Plantão Alpha', creci: '201948-F', phone: '(11) 96543-1122', email: 'juliana.castro@imob.com', monthlyGoal: 1200000, active: true },
-  { id: 'b-5', name: 'Marcos Vinícius', team: 'Equipe Lançamentos', creci: '178392-F', phone: '(11) 99888-7766', email: 'marcos.v@imob.com', monthlyGoal: 1000000, active: true },
-  { id: 'b-6', name: 'Fernanda Lima', team: 'Equipe Hunter Digital', creci: '210943-F', phone: '(11) 93322-5544', email: 'fernanda.lima@imob.com', monthlyGoal: 1500000, active: true },
+  { 
+    id: 'b-1', 
+    name: 'Carlos Silva', 
+    team: 'Equipe Plantão Alpha', 
+    creci: '184920-F', 
+    phone: '(11) 98765-4321', 
+    email: 'carlos.silva@imob.com', 
+    monthlyGoal: 1500000, 
+    active: true,
+    isDuty: true,
+    dutyShift: 'integral',
+    dutyOrder: 1,
+    leadsReceivedToday: 2,
+    maxLeadsPerDay: 8,
+    dutyStatus: 'disponivel',
+    lastAssignedAt: new Date(Date.now() - 3600000).toISOString()
+  },
+  { 
+    id: 'b-2', 
+    name: 'Ana Souza', 
+    team: 'Equipe Lançamentos', 
+    creci: '192834-F', 
+    phone: '(11) 97123-8899', 
+    email: 'ana.souza@imob.com', 
+    monthlyGoal: 1200000, 
+    active: true,
+    isDuty: true,
+    dutyShift: 'tarde',
+    dutyOrder: 2,
+    leadsReceivedToday: 1,
+    maxLeadsPerDay: 6,
+    dutyStatus: 'disponivel',
+    lastAssignedAt: new Date(Date.now() - 7200000).toISOString()
+  },
+  { 
+    id: 'b-3', 
+    name: 'Roberto Mendes', 
+    team: 'Equipe Alto Padrão', 
+    creci: '164729-F', 
+    phone: '(11) 94433-2211', 
+    email: 'roberto.m@imob.com', 
+    monthlyGoal: 2000000, 
+    active: true,
+    isDuty: true,
+    dutyShift: 'integral',
+    dutyOrder: 3,
+    leadsReceivedToday: 3,
+    maxLeadsPerDay: 5,
+    dutyStatus: 'em_atendimento',
+    lastAssignedAt: new Date(Date.now() - 1800000).toISOString()
+  },
+  { 
+    id: 'b-4', 
+    name: 'Juliana Castro', 
+    team: 'Equipe Plantão Alpha', 
+    creci: '201948-F', 
+    phone: '(11) 96543-1122', 
+    email: 'juliana.castro@imob.com', 
+    monthlyGoal: 1200000, 
+    active: true,
+    isDuty: true,
+    dutyShift: 'manha',
+    dutyOrder: 4,
+    leadsReceivedToday: 1,
+    maxLeadsPerDay: 7,
+    dutyStatus: 'disponivel',
+    lastAssignedAt: new Date(Date.now() - 10800000).toISOString()
+  },
+  { 
+    id: 'b-5', 
+    name: 'Marcos Vinícius', 
+    team: 'Equipe Lançamentos', 
+    creci: '178392-F', 
+    phone: '(11) 99888-7766', 
+    email: 'marcos.v@imob.com', 
+    monthlyGoal: 1000000, 
+    active: true,
+    isDuty: false,
+    dutyShift: 'manha',
+    dutyOrder: 5,
+    leadsReceivedToday: 0,
+    maxLeadsPerDay: 5,
+    dutyStatus: 'offline'
+  },
+  { 
+    id: 'b-6', 
+    name: 'Fernanda Lima', 
+    team: 'Equipe Hunter Digital', 
+    creci: '210943-F', 
+    phone: '(11) 93322-5544', 
+    email: 'fernanda.lima@imob.com', 
+    monthlyGoal: 1500000, 
+    active: true,
+    isDuty: true,
+    dutyShift: 'integral',
+    dutyOrder: 6,
+    leadsReceivedToday: 2,
+    maxLeadsPerDay: 10,
+    dutyStatus: 'disponivel',
+    lastAssignedAt: new Date(Date.now() - 5400000).toISOString()
+  },
 ];
 
 export const INITIAL_DEVELOPMENT_ITEMS: DevelopmentItem[] = [
@@ -241,6 +404,101 @@ export const INITIAL_TASKS: TaskItem[] = [
     assignedTo: 'Ana Souza',
     relatedClient: 'Juliana Mendes',
     createdAt: new Date().toISOString()
+  }
+];
+
+export const INITIAL_DISTRIBUTION_SETTINGS: DistributionSettings = {
+  autoDistributionEnabled: true,
+  defaultStrategy: 'round_robin',
+  notifyBrokerOnWhatsapp: true,
+  preventOverload: true,
+  fallbackBrokerId: 'b-1'
+};
+
+export const INITIAL_DISTRIBUTION_RULES: DistributionRule[] = [
+  {
+    id: 'rule-1',
+    name: 'Alto Padrão & Coberturas',
+    active: true,
+    priority: 1,
+    strategy: 'least_loaded',
+    targetDevelopment: 'Edifício Grand Palais',
+    minValue: 1000000,
+    eligibleBrokerIds: ['b-3'], // Roberto Mendes
+    description: 'Direciona imóveis de alto luxo ou com valor > R$ 1M para corretores especialistas'
+  },
+  {
+    id: 'rule-2',
+    name: 'Tráfego Pago & Redes Sociais',
+    active: true,
+    priority: 2,
+    strategy: 'round_robin',
+    targetOrigin: 'Instagram Ads',
+    eligibleBrokerIds: ['b-6', 'b-1'], // Fernanda Lima & Carlos Silva
+    description: 'Fila de resposta rápida para leads de campanhas digitais no Instagram'
+  },
+  {
+    id: 'rule-3',
+    name: 'Passantes & Visitas Stand',
+    active: true,
+    priority: 3,
+    strategy: 'round_robin',
+    targetOrigin: 'Passante / Plantão',
+    eligibleBrokerIds: ['b-1', 'b-4'], // Carlos Silva & Juliana Castro (Equipe Plantão Alpha)
+    description: 'Distribuição direta para a equipe física do stand de vendas'
+  },
+  {
+    id: 'rule-4',
+    name: 'Roleta Geral de Plantão (Equitativa)',
+    active: true,
+    priority: 10,
+    strategy: 'round_robin',
+    eligibleBrokerIds: [], // Todos os plantonistas ativos
+    description: 'Roleta alternada entre todos os corretores que estiverem com plantão ativo hoje'
+  }
+];
+
+export const INITIAL_DISTRIBUTION_LOGS: DistributionLog[] = [
+  {
+    id: 'log-1',
+    leadId: 'lead-1',
+    leadName: 'João da Silva',
+    clientPhone: '(11) 98765-4321',
+    brokerId: 'b-1',
+    brokerName: 'Carlos Silva',
+    mode: 'automatico',
+    ruleId: 'rule-3',
+    ruleName: 'Passantes & Visitas Stand',
+    timestamp: new Date(Date.now() - 7200000).toLocaleString('pt-BR'),
+    development: 'Residencial Vista Verde',
+    origin: 'Passante / Plantão'
+  },
+  {
+    id: 'log-2',
+    leadId: 'lead-2',
+    leadName: 'Mariana Duarte',
+    clientPhone: '(11) 91234-5678',
+    brokerId: 'b-6',
+    brokerName: 'Fernanda Lima',
+    mode: 'automatico',
+    ruleId: 'rule-2',
+    ruleName: 'Tráfego Pago & Redes Sociais',
+    timestamp: new Date(Date.now() - 14400000).toLocaleString('pt-BR'),
+    development: 'Studio Urban Pinheiros',
+    origin: 'Instagram Ads'
+  },
+  {
+    id: 'log-3',
+    leadId: 'lead-3',
+    leadName: 'Lucas Ferreira',
+    clientPhone: '(11) 99876-5432',
+    brokerId: 'b-3',
+    brokerName: 'Roberto Mendes',
+    mode: 'manual',
+    ruleName: 'Direcionamento Manual pelo Gestor',
+    timestamp: new Date(Date.now() - 28800000).toLocaleString('pt-BR'),
+    development: 'Edifício Grand Palais',
+    origin: 'Portal ZAP / VivaReal'
   }
 ];
 

@@ -8,6 +8,7 @@ import { ReportsView } from './components/ReportsView';
 import { AiAdvisor } from './components/AiAdvisor';
 import { TaskManager } from './components/TaskManager';
 import { LeadModal } from './components/LeadModal';
+import { LeadDistributionView } from './components/LeadDistributionView';
 import { INITIAL_LEADS } from './mockData';
 import { useDebouncedLocalStorage } from './hooks/useDebouncedLocalStorage';
 import { storageService } from './services/storageService';
@@ -22,15 +23,28 @@ import {
   TaskItem,
   ThemeMode, 
   BorderMode,
+  DistributionRule,
+  DistributionSettings,
+  DistributionLog,
   INITIAL_BROKER_ITEMS,
   INITIAL_DEVELOPMENT_ITEMS,
   INITIAL_ORIGIN_ITEMS,
   INITIAL_TEAM_ITEMS,
-  INITIAL_TASKS
+  INITIAL_TASKS,
+  INITIAL_DISTRIBUTION_RULES,
+  INITIAL_DISTRIBUTION_SETTINGS,
+  INITIAL_DISTRIBUTION_LOGS
 } from './types';
+import { distributeLead, createDistributionLog } from './services/distributionEngine';
 import { X, Phone, Mail, Building, DollarSign, AlertTriangle } from 'lucide-react';
+import { useAuth } from './contexts/AuthContext';
+import { LoginPage } from './components/LoginPage';
+import { ChangePasswordModal } from './components/ChangePasswordModal';
 
 export default function App() {
+  const { currentUser, isAdmin, loading: authLoading, logout } = useAuth();
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState<boolean>(false);
+
   const [leads, setLeads] = useState<Lead[]>(() => storageService.getLeads());
   const [brokers, setBrokers] = useState<BrokerItem[]>(() => storageService.getBrokers());
   const [developments, setDevelopments] = useState<DevelopmentItem[]>(() => storageService.getDevelopments());
@@ -39,6 +53,9 @@ export default function App() {
   const [tasks, setTasks] = useState<TaskItem[]>(() => storageService.getTasks());
   const [theme, setTheme] = useState<ThemeMode>(() => storageService.getTheme());
   const [borderMode, setBorderMode] = useState<BorderMode>(() => storageService.getBorderMode());
+  const [distributionRules, setDistributionRules] = useState<DistributionRule[]>(() => storageService.getDistributionRules());
+  const [distributionSettings, setDistributionSettings] = useState<DistributionSettings>(() => storageService.getDistributionSettings());
+  const [distributionLogs, setDistributionLogs] = useState<DistributionLog[]>(() => storageService.getDistributionLogs());
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -64,6 +81,9 @@ export default function App() {
   useDebouncedLocalStorage('immoflow_tasks', tasks, 300);
   useDebouncedLocalStorage('immoflow_theme', theme, 100);
   useDebouncedLocalStorage('immoflow_border_mode', borderMode, 100);
+  useDebouncedLocalStorage('immoflow_distribution_rules', distributionRules, 300);
+  useDebouncedLocalStorage('immoflow_distribution_settings', distributionSettings, 300);
+  useDebouncedLocalStorage('immoflow_distribution_logs', distributionLogs, 300);
 
   // Emergency synchronous flush before unload/refresh
   useEffect(() => {
@@ -77,13 +97,16 @@ export default function App() {
         localStorage.setItem('immoflow_tasks', JSON.stringify(tasks));
         localStorage.setItem('immoflow_theme', theme);
         localStorage.setItem('immoflow_border_mode', borderMode);
+        localStorage.setItem('immoflow_distribution_rules', JSON.stringify(distributionRules));
+        localStorage.setItem('immoflow_distribution_settings', JSON.stringify(distributionSettings));
+        localStorage.setItem('immoflow_distribution_logs', JSON.stringify(distributionLogs));
       } catch (err) {
         console.error('Erro no salvamento emergency beforeunload:', err);
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [leads, brokers, developments, origins, teams, tasks, theme, borderMode]);
+  }, [leads, brokers, developments, origins, teams, tasks, theme, borderMode, distributionRules, distributionSettings, distributionLogs]);
 
   // Real-time Firestore sync & seeding on mount
   useEffect(() => {
@@ -113,8 +136,27 @@ export default function App() {
         const unsubTasks = firestoreService.subscribeTasks((data) => {
           if (data) setTasks(data);
         });
+        const unsubRules = firestoreService.subscribeDistributionRules((data) => {
+          if (data && data.length > 0) setDistributionRules(data);
+        });
+        const unsubSettings = firestoreService.subscribeDistributionSettings((data) => {
+          if (data) setDistributionSettings(data);
+        });
+        const unsubLogs = firestoreService.subscribeDistributionLogs((data) => {
+          if (data) setDistributionLogs(data);
+        });
 
-        unsubs = [unsubLeads, unsubBrokers, unsubDevs, unsubOrigins, unsubTeams, unsubTasks];
+        unsubs = [
+          unsubLeads, 
+          unsubBrokers, 
+          unsubDevs, 
+          unsubOrigins, 
+          unsubTeams, 
+          unsubTasks,
+          unsubRules,
+          unsubSettings,
+          unsubLogs
+        ];
       });
 
     return () => {
@@ -125,13 +167,64 @@ export default function App() {
     };
   }, []);
 
+  // Corretor identity
+  const userBrokerName = currentUser?.brokerName || currentUser?.displayName || '';
+
+  // Tab guard: non-admin cannot view settings/cadastros or distribution tab
+  useEffect(() => {
+    if (!isAdmin && (activeTab === 'settings' || activeTab === 'distribution')) {
+      setActiveTab('dashboard');
+    }
+  }, [isAdmin, activeTab]);
+
+  // If user has default initial password, prompt modal to customize password
+  useEffect(() => {
+    if (currentUser?.mustChangePassword) {
+      setIsChangePasswordModalOpen(true);
+    }
+  }, [currentUser?.mustChangePassword]);
+
+  // Pending leads for distribution counter
+  const pendingDistributionCount = leads.filter(l => 
+    l.distributionStatus === 'pendente_distribuicao' || 
+    !l.brokerName || 
+    l.brokerName.toLowerCase().includes('triagem') ||
+    l.brokerName.toLowerCase().includes('pendente') ||
+    l.brokerName.toLowerCase().includes('não atribuído')
+  ).length;
+
+  // Role-based filtering of leads and tasks:
+  // - Admin: full access to all leads across all brokers
+  // - Broker: strictly restricted only to leads assigned to them
+  const visibleLeads = isAdmin
+    ? leads
+    : leads.filter(l => {
+        if (!l) return false;
+        const bName = l.brokerName ? l.brokerName.toLowerCase().trim() : '';
+        const currentBName = userBrokerName ? userBrokerName.toLowerCase().trim() : '';
+        const brokerMatches = bName && currentBName && (bName === currentBName || bName.includes(currentBName) || currentBName.includes(bName));
+        const emailMatches = l.clientEmail && currentUser?.email && l.clientEmail.toLowerCase().trim() === currentUser.email.toLowerCase().trim();
+        return Boolean(brokerMatches || emailMatches);
+      });
+
+  const visibleTasks = isAdmin
+    ? tasks
+    : tasks.filter(t => {
+        if (!t) return false;
+        const assigned = t.assignedTo ? t.assignedTo.toLowerCase().trim() : '';
+        const currentBName = userBrokerName ? userBrokerName.toLowerCase().trim() : '';
+        return Boolean(assigned && currentBName && (assigned === currentBName || assigned.includes(currentBName)));
+      });
+
   // Derived simple lists for select inputs and filters
   const brokerNames = brokers.filter(b => b.active).map(b => b.name);
+  const availableBrokersForForms = isAdmin 
+    ? brokerNames 
+    : [userBrokerName || brokerNames[0] || 'Corretor'];
   const devNames = developments.map(d => d.name);
   const originNames = origins.filter(o => o.active).map(o => o.name);
 
   const handleSaveLead = (leadData: Partial<Lead>) => {
-    const defaultBroker = brokerNames[0] || 'Corretor Geral';
     const defaultDev = devNames[0] || 'Empreendimento Principal';
     const defaultOrigin = originNames[0] || 'Plantão';
 
@@ -141,6 +234,7 @@ export default function App() {
           const updated: Lead = {
             ...l,
             ...leadData,
+            brokerName: isAdmin ? (leadData.brokerName || l.brokerName) : userBrokerName,
             updatedAt: new Date().toISOString(),
             history: [
               ...l.history,
@@ -148,7 +242,7 @@ export default function App() {
                 id: `h-${Date.now()}`,
                 date: new Date().toLocaleString('pt-BR'),
                 action: `Lead atualizado (Status: ${leadData.status || l.status})`,
-                user: leadData.brokerName || l.brokerName
+                user: isAdmin ? (leadData.brokerName || l.brokerName) : userBrokerName
               }
             ]
           };
@@ -159,12 +253,68 @@ export default function App() {
       }));
       showToast('☁️ Lead atualizado no Firestore!');
     } else {
+      // Determine distribution routing
+      let targetBrokerName = userBrokerName;
+      let distStatus: 'distribuido' | 'pendente_distribuicao' = 'distribuido';
+      let distMode: 'automatico' | 'manual' | 'direto' = 'direto';
+      let distRuleName = '';
+      const isAutoRequested = leadData.brokerName?.includes('Roleta') || 
+        (!leadData.brokerName && distributionSettings.autoDistributionEnabled);
+      const isTriageRequested = leadData.brokerName?.includes('Triagem') || 
+        leadData.brokerName?.includes('Pendente');
+
+      if (isAdmin && isAutoRequested) {
+        const res = distributeLead(leadData, brokers, distributionRules, distributionSettings);
+        if (res.success && res.assignedBroker) {
+          targetBrokerName = res.assignedBroker.name;
+          distStatus = 'distribuido';
+          distMode = 'automatico';
+          distRuleName = res.ruleName;
+
+          const nowIso = new Date().toISOString();
+          const updatedBrokers = brokers.map(b => {
+            if (b.id === res.assignedBroker!.id) {
+              const up = { ...b, leadsReceivedToday: (b.leadsReceivedToday || 0) + 1, lastAssignedAt: nowIso };
+              firestoreService.saveBroker(up);
+              return up;
+            }
+            return b;
+          });
+          setBrokers(updatedBrokers);
+
+          const dummyLeadForLog = {
+            id: `lead-${Date.now()}`,
+            clientName: leadData.clientName || 'Lead',
+            clientPhone: leadData.clientPhone || '',
+            development: leadData.development || defaultDev,
+            origin: leadData.origin || defaultOrigin
+          } as Lead;
+          const log = createDistributionLog(dummyLeadForLog, res.assignedBroker, 'automatico', res.ruleName, res.ruleApplied?.id);
+          firestoreService.saveDistributionLog(log);
+          setDistributionLogs(prev => [log, ...prev]);
+          showToast(`⚡ Lead distribuído automaticamente para ${targetBrokerName}!`);
+        } else {
+          targetBrokerName = 'Mesa de Triagem';
+          distStatus = 'pendente_distribuicao';
+          distMode = 'manual';
+          showToast('📥 Lead adicionado à Mesa de Triagem (sem plantonista disponível)');
+        }
+      } else if (isAdmin && isTriageRequested) {
+        targetBrokerName = 'Mesa de Triagem';
+        distStatus = 'pendente_distribuicao';
+        distMode = 'manual';
+        showToast('📥 Lead salvo na Mesa de Triagem!');
+      } else if (isAdmin) {
+        targetBrokerName = leadData.brokerName || brokerNames[0] || 'Corretor Geral';
+        distStatus = 'distribuido';
+        distMode = 'direto';
+      }
       const newLead: Lead = {
         id: `lead-${Date.now()}`,
         clientName: leadData.clientName || '',
         clientPhone: leadData.clientPhone || '',
         clientEmail: leadData.clientEmail || '',
-        brokerName: leadData.brokerName || defaultBroker,
+        brokerName: targetBrokerName,
         development: leadData.development || defaultDev,
         origin: leadData.origin || defaultOrigin,
         status: leadData.status || 'lead',
@@ -178,14 +328,18 @@ export default function App() {
         rejectionReason: leadData.rejectionReason,
         rejectionDetails: leadData.rejectionDetails,
         nextAction: leadData.nextAction,
+        distributionStatus: distStatus,
+        distributionMode: distMode,
+        distributionRuleName: distRuleName,
+        distributedAt: new Date().toISOString(),
         attendanceRecords: leadData.attendanceRecords || [
           {
             id: `att-${Date.now()}`,
             date: new Date().toLocaleString('pt-BR'),
             contactType: 'whatsapp',
-            summary: 'Lead cadastrado no sistema.',
+            summary: distStatus === 'pendente_distribuicao' ? 'Lead colocado na Mesa de Triagem.' : 'Lead cadastrado no sistema.',
             nextAction: leadData.nextAction || 'Fazer primeiro contato',
-            userName: leadData.brokerName || defaultBroker
+            userName: targetBrokerName
           }
         ],
         createdAt: new Date().toISOString(),
@@ -199,8 +353,10 @@ export default function App() {
           {
             id: `h-${Date.now()}`,
             date: new Date().toLocaleString('pt-BR'),
-            action: `Lead criado (Origem: ${leadData.origin || defaultOrigin})`,
-            user: leadData.brokerName || defaultBroker
+            action: distStatus === 'pendente_distribuicao'
+              ? `Lead registrado na Mesa de Triagem (Origem: ${leadData.origin || defaultOrigin})`
+              : `Lead criado e atribuído para ${targetBrokerName} (Origem: ${leadData.origin || defaultOrigin})`,
+            user: targetBrokerName
           }
         ]
       };
@@ -274,10 +430,24 @@ export default function App() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-4">
+        <div className="w-10 h-10 border-3 border-rose-600/30 border-t-rose-600 rounded-full animate-spin mb-4" />
+        <p className="text-sm text-slate-300 font-medium">Carregando ImmoFlow CRM...</p>
+        <p className="text-xs text-slate-500 mt-1">Conectando aos serviços em nuvem</p>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <LoginPage theme={theme} />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       
-      {/* Top Navbar with Theme & Highlight Border Controls */}
+      {/* Top Navbar with Theme, Profile & Highlight Border Controls */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -288,13 +458,18 @@ export default function App() {
         setTheme={setTheme}
         borderMode={borderMode}
         setBorderMode={setBorderMode}
+        currentUser={currentUser}
+        isAdmin={isAdmin}
+        onOpenChangePasswordModal={() => setIsChangePasswordModalOpen(true)}
+        onLogout={logout}
+        pendingDistributionCount={pendingDistributionCount}
       />
 
-      {/* Main Content Body */}
+      {/* Main Content Body (Filtered by user role) */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'dashboard' && (
           <Dashboard
-            leads={leads}
+            leads={visibleLeads}
             onSelectLead={(lead) => setSelectedLeadDetails(lead)}
             onNavigateTab={(tab) => setActiveTab(tab)}
             brokers={brokers}
@@ -305,7 +480,7 @@ export default function App() {
 
         {activeTab === 'kanban' && (
           <KanbanBoard
-            leads={leads}
+            leads={visibleLeads}
             onUpdateStatus={handleUpdateStatus}
             onEditLead={(lead) => { setLeadToEdit(lead); setIsModalOpen(true); }}
             onDeleteLead={(id) => setLeadToDeleteId(id)}
@@ -317,13 +492,13 @@ export default function App() {
 
         {activeTab === 'leads' && (
           <LeadsTable
-            leads={leads}
+            leads={visibleLeads}
             onOpenNewLeadModal={() => { setLeadToEdit(null); setIsModalOpen(true); }}
             onEditLead={(lead) => { setLeadToEdit(lead); setIsModalOpen(true); }}
             onDeleteLead={(id) => setLeadToDeleteId(id)}
             onSelectLead={(lead) => setSelectedLeadDetails(lead)}
             onUpdateStatus={handleUpdateStatus}
-            availableBrokers={brokerNames}
+            availableBrokers={availableBrokersForForms}
             availableDevelopments={devNames}
             availableOrigins={originNames}
             theme={theme}
@@ -331,7 +506,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'settings' && (
+        {activeTab === 'settings' && isAdmin && (
           <BrokersPropertiesView 
             brokers={brokers}
             setBrokers={(action) => {
@@ -368,14 +543,14 @@ export default function App() {
 
         {activeTab === 'tasks' && (
           <TaskManager 
-            tasks={tasks}
+            tasks={visibleTasks}
             setTasks={(action) => {
               const next = typeof action === 'function' ? action(tasks) : action;
               setTasks(next);
               next.forEach(t => firestoreService.saveTask(t));
               showToast('☁️ Tarefas sincronizadas com o Firestore!');
             }}
-            availableBrokers={brokerNames}
+            availableBrokers={availableBrokersForForms}
             theme={theme}
             borderMode={borderMode}
           />
@@ -383,9 +558,45 @@ export default function App() {
 
         {activeTab === 'reports' && (
           <ReportsView 
-            leads={leads}
-            availableBrokers={brokerNames}
+            leads={visibleLeads}
+            availableBrokers={availableBrokersForForms}
             availableDevelopments={devNames}
+            theme={theme}
+            borderMode={borderMode}
+          />
+        )}
+
+        {activeTab === 'distribution' && isAdmin && (
+          <LeadDistributionView
+            leads={leads}
+            onUpdateLead={(upLead) => {
+              setLeads(prev => prev.map(l => l.id === upLead.id ? upLead : l));
+              firestoreService.saveLead(upLead);
+            }}
+            brokers={brokers}
+            onUpdateBrokers={(upBrokers) => {
+              setBrokers(upBrokers);
+              upBrokers.forEach(b => firestoreService.saveBroker(b));
+            }}
+            developments={developments}
+            origins={origins}
+            distributionRules={distributionRules}
+            onUpdateRules={(upRules) => {
+              setDistributionRules(upRules);
+              upRules.forEach(r => firestoreService.saveDistributionRule(r));
+            }}
+            distributionSettings={distributionSettings}
+            onUpdateSettings={(upSettings) => {
+              setDistributionSettings(upSettings);
+              firestoreService.saveDistributionSettings(upSettings);
+            }}
+            distributionLogs={distributionLogs}
+            onAddLog={(log) => {
+              setDistributionLogs(prev => [log, ...prev]);
+              firestoreService.saveDistributionLog(log);
+            }}
+            onOpenNewLeadModal={() => { setLeadToEdit(null); setIsModalOpen(true); }}
+            onSelectLeadDetails={(lead) => setSelectedLeadDetails(lead)}
             theme={theme}
             borderMode={borderMode}
           />
@@ -393,12 +604,19 @@ export default function App() {
 
         {activeTab === 'ai' && (
           <AiAdvisor 
-            leads={leads}
+            leads={visibleLeads}
             theme={theme}
             borderMode={borderMode}
           />
         )}
       </main>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
+        theme={theme}
+      />
 
       {/* New / Edit Lead Modal */}
       <LeadModal
@@ -406,11 +624,12 @@ export default function App() {
         onClose={() => { setIsModalOpen(false); setLeadToEdit(null); }}
         onSave={handleSaveLead}
         leadToEdit={leadToEdit}
-        availableBrokers={brokerNames}
+        availableBrokers={availableBrokersForForms}
         availableDevelopments={devNames}
         availableOrigins={originNames}
         theme={theme}
         borderMode={borderMode}
+        isAdmin={isAdmin}
       />
 
       {/* Delete Lead In-App Confirmation Modal (no window.confirm) */}

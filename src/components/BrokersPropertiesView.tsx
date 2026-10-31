@@ -15,9 +15,18 @@ import {
   Briefcase,
   ShieldCheck,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  AlertCircle,
+  KeyRound,
+  UserCheck,
+  UserX,
+  Copy,
+  Lock,
+  Shield,
+  UserPlus
 } from 'lucide-react';
-import { BrokerItem, DevelopmentItem, OriginItem, TeamItem, ThemeMode, BorderMode } from '../types';
+import { BrokerItem, DevelopmentItem, OriginItem, TeamItem, ThemeMode, BorderMode, AppUser, UserRole } from '../types';
+import { useAuth, DEFAULT_INITIAL_PASSWORD, MASTER_ADMIN_EMAIL } from '../contexts/AuthContext';
 
 interface BrokersPropertiesViewProps {
   brokers: BrokerItem[];
@@ -44,7 +53,8 @@ export const BrokersPropertiesView: React.FC<BrokersPropertiesViewProps> = ({
   theme,
   borderMode
 }) => {
-  const [subTab, setSubTab] = useState<'brokers' | 'developments' | 'origins' | 'teams'>('brokers');
+  const { usersList, adminCreateUser, adminToggleUserStatus, adminDeleteUser } = useAuth();
+  const [subTab, setSubTab] = useState<'brokers' | 'developments' | 'origins' | 'teams' | 'users'>('brokers');
 
   // Modal states
   const [isBrokerModalOpen, setIsBrokerModalOpen] = useState(false);
@@ -58,6 +68,37 @@ export const BrokersPropertiesView: React.FC<BrokersPropertiesViewProps> = ({
     monthlyGoal: 1200000,
     active: true,
   });
+
+  // User Access Modal states
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [userForm, setUserForm] = useState<{
+    displayName: string;
+    email: string;
+    role: UserRole;
+    brokerId: string;
+    brokerName: string;
+    phone: string;
+    creci: string;
+    initialPassword: string;
+  }>({
+    displayName: '',
+    email: '',
+    role: 'broker',
+    brokerId: '',
+    brokerName: '',
+    phone: '',
+    creci: '',
+    initialPassword: DEFAULT_INITIAL_PASSWORD,
+  });
+  const [userCreationLoading, setUserCreationLoading] = useState(false);
+  const [userCreationError, setUserCreationError] = useState<string | null>(null);
+  const [createdCredentialsModal, setCreatedCredentialsModal] = useState<{
+    email: string;
+    password: string;
+    name: string;
+    role: string;
+  } | null>(null);
+  const [copiedSuccess, setCopiedSuccess] = useState(false);
 
   const [isDevModalOpen, setIsDevModalOpen] = useState(false);
   const [editingDev, setEditingDev] = useState<DevelopmentItem | null>(null);
@@ -84,7 +125,7 @@ export const BrokersPropertiesView: React.FC<BrokersPropertiesViewProps> = ({
   // Delete confirmation modal
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
-    type: 'broker' | 'dev' | 'origin';
+    type: 'broker' | 'dev' | 'origin' | 'user';
     id: string;
     name: string;
   }>({ isOpen: false, type: 'broker', id: '', name: '' });
@@ -209,6 +250,55 @@ export const BrokersPropertiesView: React.FC<BrokersPropertiesViewProps> = ({
     setIsOriginModalOpen(false);
   };
 
+  const openNewUser = (prefilledBroker?: BrokerItem) => {
+    setUserCreationError(null);
+    setUserForm({
+      displayName: prefilledBroker ? prefilledBroker.name : '',
+      email: prefilledBroker ? prefilledBroker.email : '',
+      role: 'broker',
+      brokerId: prefilledBroker ? prefilledBroker.id : (brokers[0]?.id || ''),
+      brokerName: prefilledBroker ? prefilledBroker.name : (brokers[0]?.name || ''),
+      phone: prefilledBroker ? prefilledBroker.phone : '',
+      creci: prefilledBroker ? prefilledBroker.creci : '',
+      initialPassword: DEFAULT_INITIAL_PASSWORD,
+    });
+    setIsUserModalOpen(true);
+  };
+
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userForm.email.trim() || !userForm.displayName.trim()) {
+      setUserCreationError('Nome e e-mail são obrigatórios.');
+      return;
+    }
+    setUserCreationLoading(true);
+    setUserCreationError(null);
+
+    const res = await adminCreateUser({
+      displayName: userForm.displayName.trim(),
+      email: userForm.email.trim(),
+      role: userForm.role,
+      brokerId: userForm.brokerId || undefined,
+      brokerName: userForm.brokerName || userForm.displayName,
+      phone: userForm.phone,
+      creci: userForm.creci,
+      initialPassword: userForm.initialPassword || DEFAULT_INITIAL_PASSWORD,
+    });
+
+    setUserCreationLoading(false);
+    if (res.success) {
+      setIsUserModalOpen(false);
+      setCreatedCredentialsModal({
+        name: userForm.displayName,
+        email: userForm.email,
+        password: res.initialPassword || DEFAULT_INITIAL_PASSWORD,
+        role: userForm.role === 'admin' ? 'Administrador' : 'Corretor',
+      });
+    } else {
+      setUserCreationError(res.error || 'Erro ao criar usuário.');
+    }
+  };
+
   // Confirm delete
   const executeDelete = () => {
     if (deleteConfirm.type === 'broker') {
@@ -217,6 +307,8 @@ export const BrokersPropertiesView: React.FC<BrokersPropertiesViewProps> = ({
       setDevelopments(prev => prev.filter(d => d.id !== deleteConfirm.id));
     } else if (deleteConfirm.type === 'origin') {
       setOrigins(prev => prev.filter(o => o.id !== deleteConfirm.id));
+    } else if (deleteConfirm.type === 'user') {
+      adminDeleteUser(deleteConfirm.id);
     }
     setDeleteConfirm({ isOpen: false, type: 'broker', id: '', name: '' });
   };
@@ -252,6 +344,13 @@ export const BrokersPropertiesView: React.FC<BrokersPropertiesViewProps> = ({
 
           <div className="flex flex-wrap gap-2">
             <button
+              onClick={() => { setSubTab('users'); openNewUser(); }}
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold backdrop-blur-md transition-all flex items-center gap-2 cursor-pointer border border-white/30"
+            >
+              <KeyRound className="w-4 h-4 text-amber-300" />
+              <span>Novo Usuário / Login</span>
+            </button>
+            <button
               onClick={openNewBroker}
               className="px-4 py-2 bg-white text-slate-900 hover:bg-slate-100 rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
             >
@@ -271,6 +370,18 @@ export const BrokersPropertiesView: React.FC<BrokersPropertiesViewProps> = ({
 
       {/* Sub Tabs (Horizontally scrollable with no text squishing) */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto scroll-smooth">
+        <button
+          onClick={() => setSubTab('users')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0 cursor-pointer ${
+            subTab === 'users'
+              ? theme === 'bordo' ? 'bg-rose-900 text-white shadow-sm' : 'bg-blue-600 text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <KeyRound className="w-4 h-4" />
+          <span>Usuários & Acessos ({usersList.length})</span>
+        </button>
+
         <button
           onClick={() => setSubTab('brokers')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0 cursor-pointer ${
@@ -307,6 +418,151 @@ export const BrokersPropertiesView: React.FC<BrokersPropertiesViewProps> = ({
           <span>Canais de Origem ({origins.length})</span>
         </button>
       </div>
+
+      {/* SUBTAB 0: USERS & ACCESS MANAGEMENT */}
+      {subTab === 'users' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800">
+            <div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                  Usuários e Permissões de Acesso
+                </h2>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Cadastre e gerencie logins de corretores e administradores. Corretores visualizam apenas seus próprios clientes; administradores têm visão global.
+              </p>
+            </div>
+            <button
+              onClick={() => openNewUser()}
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-all flex-shrink-0 ${
+                theme === 'bordo' ? 'bg-rose-900 hover:bg-rose-800 shadow-rose-950/20' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Cadastrar Novo Login</span>
+            </button>
+          </div>
+
+          {/* Master Admin Notice Banner */}
+          <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-3">
+            <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-semibold">
+                Administrador Master: <strong>{MASTER_ADMIN_EMAIL}</strong>
+              </p>
+              <p className="text-amber-700 dark:text-amber-300 text-[11px] leading-relaxed">
+                Esta conta possui privilégio irrestrito de gestão sobre todos os corretores, leads, comissões e configurações da plataforma.
+              </p>
+            </div>
+          </div>
+
+          {/* Users Table / Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {usersList.map((user) => {
+              const isMaster = user.email.toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase();
+              return (
+                <div
+                  key={user.uid}
+                  className={`bg-white dark:bg-slate-900 rounded-2xl p-5 ${borderClass} space-y-4 hover:shadow-md transition-all relative flex flex-col justify-between`}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
+                          isMaster || user.role === 'admin'
+                            ? 'bg-rose-100 text-rose-900 dark:bg-rose-950 dark:text-rose-300'
+                            : 'bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-300'
+                        }`}>
+                          {user.displayName?.slice(0, 2).toUpperCase() || 'US'}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="font-bold text-sm text-slate-900 dark:text-white">
+                              {user.displayName}
+                            </h3>
+                            {isMaster && (
+                              <span title="Master Admin" className="text-amber-500">★</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 font-medium">{user.email}</p>
+                        </div>
+                      </div>
+
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        user.active !== false
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                          : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                      }`}>
+                        {user.active !== false ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Nível de Acesso:</span>
+                        <span className={`font-bold px-2 py-0.5 rounded-md text-[10px] ${
+                          isMaster || user.role === 'admin'
+                            ? 'bg-rose-100 text-rose-900 dark:bg-rose-950 dark:text-rose-300'
+                            : 'bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-300'
+                        }`}>
+                          {isMaster ? 'Super Admin' : user.role === 'admin' ? 'Administrador' : 'Corretor (Restrito)'}
+                        </span>
+                      </div>
+
+                      {user.role === 'broker' && (
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                          <span className="text-slate-500">Corretor Vinculado:</span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">
+                            {user.brokerName || user.displayName}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                        <span className="text-slate-500">Status da Senha:</span>
+                        <span className={`text-[10px] font-semibold ${
+                          user.mustChangePassword
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : 'text-emerald-600 dark:text-emerald-400'
+                        }`}>
+                          {user.mustChangePassword ? 'Padrão (Pendente troca)' : 'Senha Pessoal Ativa'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  {!isMaster && (
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+                      <button
+                        onClick={() => adminToggleUserStatus(user.uid, user.active === false ? true : false)}
+                        className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+                          user.active !== false
+                            ? 'text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40'
+                            : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                        }`}
+                      >
+                        {user.active !== false ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
+                        <span>{user.active !== false ? 'Desativar' : 'Ativar'}</span>
+                      </button>
+
+                      <button
+                        onClick={() => setDeleteConfirm({ isOpen: true, type: 'user', id: user.uid, name: user.displayName })}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                        title="Excluir Usuário"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* SUBTAB 1: BROKERS & TEAMS */}
       {subTab === 'brokers' && (
@@ -346,11 +602,20 @@ export const BrokersPropertiesView: React.FC<BrokersPropertiesViewProps> = ({
                     </div>
                   </div>
 
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    broker.active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {broker.active ? 'Ativo' : 'Inativo'}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      broker.active ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {broker.active ? 'Ativo' : 'Inativo'}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold ${
+                      broker.isDuty 
+                        ? 'bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300' 
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                    }`}>
+                      {broker.isDuty ? '⚡ Plantão Ativo' : 'Fora da Escala'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl">
@@ -829,6 +1094,205 @@ export const BrokersPropertiesView: React.FC<BrokersPropertiesViewProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: USER ACCESS FORM */}
+      {isUserModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+              <div className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                  Cadastrar Usuário de Acesso
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsUserModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveUser} className="p-6 space-y-4">
+              {userCreationError && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{userCreationError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Nome do Usuário *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={userForm.displayName}
+                  onChange={(e) => setUserForm({ ...userForm, displayName: e.target.value })}
+                  placeholder="Ex: Carlos Silva"
+                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-hidden focus:border-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  E-mail de Login *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={userForm.email}
+                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                  placeholder="carlos.silva@imob.com"
+                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-hidden focus:border-rose-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Tipo de Acesso
+                  </label>
+                  <select
+                    value={userForm.role}
+                    onChange={(e) => setUserForm({ ...userForm, role: e.target.value as UserRole })}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                  >
+                    <option value="broker">Corretor (Restrito)</option>
+                    <option value="admin">Administrador (Total)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Vincular Corretor
+                  </label>
+                  <select
+                    value={userForm.brokerName}
+                    onChange={(e) => {
+                      const sel = brokers.find(b => b.name === e.target.value);
+                      setUserForm({
+                        ...userForm,
+                        brokerName: e.target.value,
+                        brokerId: sel?.id || '',
+                      });
+                    }}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                  >
+                    <option value="">Mesmo Nome / Novo</option>
+                    {brokers.map(b => (
+                      <option key={b.id} value={b.name}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Senha Padrão Inicial
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={userForm.initialPassword}
+                  onChange={(e) => setUserForm({ ...userForm, initialPassword: e.target.value })}
+                  placeholder="Ex: Immo123!"
+                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  O corretor poderá alterar esta senha no painel dele a qualquer momento.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsUserModalOpen(false)}
+                  className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={userCreationLoading}
+                  className={`px-4 py-2 text-xs font-bold text-white rounded-lg shadow-sm cursor-pointer disabled:opacity-50 ${
+                    theme === 'bordo' ? 'bg-rose-900 hover:bg-rose-800' : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  {userCreationLoading ? 'Criando...' : 'Cadastrar Usuário'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CREDENTIALS SUCCESS MODAL (Shareable with broker) */}
+      {createdCredentialsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-7 h-7" />
+            </div>
+            
+            <div className="text-center">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Usuário Cadastrado com Sucesso!
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Envie os dados de acesso abaixo para o usuário realizar seu primeiro login:
+              </p>
+            </div>
+
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Nome:</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{createdCredentialsModal.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">E-mail (Login):</span>
+                <span className="font-semibold text-rose-700 dark:text-rose-400 font-mono">{createdCredentialsModal.email}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Senha Inicial:</span>
+                <span className="font-semibold text-slate-900 dark:text-white font-mono">{createdCredentialsModal.password}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Nível de Acesso:</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{createdCredentialsModal.role}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const text = `*ImmoFlow CRM - Dados de Acesso*\nOlá ${createdCredentialsModal.name},\nSeu acesso foi liberado:\n• *E-mail:* ${createdCredentialsModal.email}\n• *Senha Inicial:* ${createdCredentialsModal.password}\n\nVocê pode alterar a senha a qualquer momento no seu perfil.`;
+                  navigator.clipboard.writeText(text);
+                  setCopiedSuccess(true);
+                  setTimeout(() => setCopiedSuccess(false), 2500);
+                }}
+                className="flex-1 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 font-semibold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              >
+                {copiedSuccess ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                <span>{copiedSuccess ? 'Dados Copiados!' : 'Copiar para WhatsApp'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCreatedCredentialsModal(null)}
+                className={`py-2.5 px-5 text-white font-semibold text-xs rounded-xl cursor-pointer ${
+                  theme === 'bordo' ? 'bg-rose-900 hover:bg-rose-800' : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                Concluir
+              </button>
+            </div>
           </div>
         </div>
       )}

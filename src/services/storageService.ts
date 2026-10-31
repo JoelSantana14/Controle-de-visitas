@@ -1,4 +1,19 @@
-import { Lead, BrokerItem, DevelopmentItem, OriginItem, TeamItem, TaskItem, ThemeMode, BorderMode } from '../types';
+import { 
+  Lead, 
+  BrokerItem, 
+  DevelopmentItem, 
+  OriginItem, 
+  TeamItem, 
+  TaskItem, 
+  ThemeMode, 
+  BorderMode,
+  DistributionRule,
+  DistributionSettings,
+  DistributionLog,
+  INITIAL_DISTRIBUTION_RULES,
+  INITIAL_DISTRIBUTION_SETTINGS,
+  INITIAL_DISTRIBUTION_LOGS
+} from '../types';
 import { INITIAL_LEADS } from '../mockData';
 import { INITIAL_BROKER_ITEMS, INITIAL_DEVELOPMENT_ITEMS, INITIAL_ORIGIN_ITEMS, INITIAL_TEAM_ITEMS, INITIAL_TASKS } from '../types';
 
@@ -11,6 +26,9 @@ const STORAGE_KEYS = {
   TASKS: 'immoflow_tasks',
   THEME: 'immoflow_theme',
   BORDER_MODE: 'immoflow_border_mode',
+  DISTRIBUTION_RULES: 'immoflow_distribution_rules',
+  DISTRIBUTION_SETTINGS: 'immoflow_distribution_settings',
+  DISTRIBUTION_LOGS: 'immoflow_distribution_logs',
 };
 
 // Sanitization & Migration helper for Leads
@@ -58,6 +76,13 @@ function sanitizeBrokers(raw: any[]): BrokerItem[] {
     email: item.email || '',
     monthlyGoal: typeof item.monthlyGoal === 'number' ? item.monthlyGoal : 1200000,
     active: typeof item.active === 'boolean' ? item.active : true,
+    isDuty: typeof item.isDuty === 'boolean' ? item.isDuty : true,
+    dutyShift: item.dutyShift || 'integral',
+    dutyOrder: typeof item.dutyOrder === 'number' ? item.dutyOrder : idx + 1,
+    leadsReceivedToday: typeof item.leadsReceivedToday === 'number' ? item.leadsReceivedToday : 0,
+    maxLeadsPerDay: typeof item.maxLeadsPerDay === 'number' ? item.maxLeadsPerDay : 8,
+    dutyStatus: item.dutyStatus || 'disponivel',
+    lastAssignedAt: item.lastAssignedAt,
   }));
 }
 
@@ -254,6 +279,63 @@ export const storageService = {
     } catch (e) {}
   },
 
+  getDistributionRules(): DistributionRule[] {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.DISTRIBUTION_RULES);
+      if (saved !== null) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Erro ao ler regras de distribuição:', e);
+    }
+    return INITIAL_DISTRIBUTION_RULES;
+  },
+  setDistributionRules(rules: DistributionRule[]) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.DISTRIBUTION_RULES, JSON.stringify(rules));
+    } catch (e) {
+      console.error('Erro ao salvar regras de distribuição:', e);
+    }
+  },
+
+  getDistributionSettings(): DistributionSettings {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.DISTRIBUTION_SETTINGS);
+      if (saved !== null) {
+        return { ...INITIAL_DISTRIBUTION_SETTINGS, ...JSON.parse(saved) };
+      }
+    } catch (e) {
+      console.error('Erro ao ler configurações de distribuição:', e);
+    }
+    return INITIAL_DISTRIBUTION_SETTINGS;
+  },
+  setDistributionSettings(settings: DistributionSettings) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.DISTRIBUTION_SETTINGS, JSON.stringify(settings));
+    } catch (e) {
+      console.error('Erro ao salvar configurações de distribuição:', e);
+    }
+  },
+
+  getDistributionLogs(): DistributionLog[] {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.DISTRIBUTION_LOGS);
+      if (saved !== null) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Erro ao ler logs de distribuição:', e);
+    }
+    return INITIAL_DISTRIBUTION_LOGS;
+  },
+  setDistributionLogs(logs: DistributionLog[]) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.DISTRIBUTION_LOGS, JSON.stringify(logs));
+    } catch (e) {
+      console.error('Erro ao salvar logs de distribuição:', e);
+    }
+  },
+
   exportBackupJson(): string {
     const backup = {
       leads: this.getLeads(),
@@ -264,6 +346,9 @@ export const storageService = {
       tasks: this.getTasks(),
       theme: this.getTheme(),
       borderMode: this.getBorderMode(),
+      distributionRules: this.getDistributionRules(),
+      distributionSettings: this.getDistributionSettings(),
+      distributionLogs: this.getDistributionLogs(),
       exportedAt: new Date().toISOString()
     };
     return JSON.stringify(backup, null, 2);
@@ -280,6 +365,9 @@ export const storageService = {
       if (data.tasks) this.setTasks(sanitizeTasks(data.tasks));
       if (data.theme) this.setTheme(data.theme);
       if (data.borderMode) this.setBorderMode(data.borderMode);
+      if (data.distributionRules) this.setDistributionRules(data.distributionRules);
+      if (data.distributionSettings) this.setDistributionSettings(data.distributionSettings);
+      if (data.distributionLogs) this.setDistributionLogs(data.distributionLogs);
       return true;
     } catch (e) {
       console.error('Erro ao importar JSON de backup:', e);

@@ -12,6 +12,7 @@ interface LeadModalProps {
   availableOrigins?: string[];
   theme?: ThemeMode;
   borderMode?: BorderMode;
+  isAdmin?: boolean;
 }
 
 export const LeadModal: React.FC<LeadModalProps> = ({
@@ -23,7 +24,8 @@ export const LeadModal: React.FC<LeadModalProps> = ({
   availableDevelopments = DEFAULT_DEVELOPMENTS,
   availableOrigins = DEFAULT_ORIGINS,
   theme = 'bordo',
-  borderMode = 'destacada'
+  borderMode = 'destacada',
+  isAdmin = true,
 }) => {
   const brokersList = availableBrokers.length > 0 ? availableBrokers : DEFAULT_BROKERS;
   const developmentsList = availableDevelopments.length > 0 ? availableDevelopments : DEFAULT_DEVELOPMENTS;
@@ -264,16 +266,24 @@ export const LeadModal: React.FC<LeadModalProps> = ({
 
               <div>
                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Corretor Responsável
+                  Corretor Responsável / Distribuição
                 </label>
                 <select
-                  value={formData.brokerName || brokersList[0]}
+                  value={formData.brokerName || (isAdmin ? '⚡ Roleta Automática (Plantonista)' : brokersList[0])}
                   onChange={(e) => setFormData({ ...formData, brokerName: e.target.value })}
                   className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-800 text-slate-900 dark:text-white"
                 >
-                  {brokersList.map((broker) => (
-                    <option key={broker} value={broker}>{broker}</option>
-                  ))}
+                  {isAdmin && (
+                    <optgroup label="Distribuição Automática / Triagem">
+                      <option value="⚡ Roleta Automática (Plantonista)">⚡ Roleta Automática (Plantonistas de Plantão)</option>
+                      <option value="📥 Mesa de Triagem (Pendente)">📥 Mesa de Triagem (Pendente de Distribuição)</option>
+                    </optgroup>
+                  )}
+                  <optgroup label="Atribuição Direta">
+                    {brokersList.map((broker) => (
+                      <option key={broker} value={broker}>{broker}</option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
 

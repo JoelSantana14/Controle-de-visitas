@@ -23,6 +23,12 @@ export const db = (rawDbId && rawDbId !== '(default)' && !rawDbId.startsWith('ai
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
+// Secondary auth instance specifically for admin to register new users without signing out current admin
+export const getSecondaryAuth = () => {
+  const secondaryApp = getApps().find(a => a.name === 'SecondaryAdminAuth') || initializeApp(resolvedConfig, 'SecondaryAdminAuth');
+  return getAuth(secondaryApp);
+};
+
 // Safe connection test on boot
 async function testConnection() {
   try {

@@ -6,7 +6,8 @@ import {
   signOut, 
   updatePassword,
   onAuthStateChanged,
-  signInWithPopup
+  signInWithPopup,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, googleProvider, db, getSecondaryAuth } from '../firebase';
@@ -25,6 +26,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   changePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
   adminCreateUser: (userData: {
     email: string;
@@ -211,6 +213,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const resetPassword = async (email: string): Promise<{ success: boolean; error?: string; message?: string }> => {
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      if (!cleanEmail) {
+        return { success: false, error: 'Por favor, informe seu e-mail para receber o link de recuperação.' };
+      }
+      await sendPasswordResetEmail(auth, cleanEmail);
+      return { 
+        success: true, 
+        message: `Enviamos um e-mail de recuperação para ${cleanEmail}. Por favor, verifique sua caixa de entrada e pasta de spam.` 
+      };
+    } catch (err: any) {
+      console.error('Password reset error:', err);
+      if (err.code === 'auth/user-not-found') {
+        return { success: false, error: 'Não encontramos nenhuma conta com este e-mail.' };
+      } else if (err.code === 'auth/invalid-email') {
+        return { success: false, error: 'Formato de e-mail inválido.' };
+      } else if (err.code === 'auth/too-many-requests') {
+        return { success: false, error: 'Muitas solicitações seguidas. Aguarde alguns instantes antes de tentar novamente.' };
+      }
+      return { success: false, error: err.message || 'Erro ao enviar e-mail de recuperação.' };
+    }
+  };
+
   const changePassword = async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
     if (!auth.currentUser) {
       return { success: false, error: 'Nenhum usuário conectado.' };
@@ -323,6 +349,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         loginWithGoogle,
         logout,
+        resetPassword,
         changePassword,
         adminCreateUser,
         adminToggleUserStatus,
